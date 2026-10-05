@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+enum OrderStatus {
+  PLACED
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  cart         Cart?
+  orders       Order[]
+  vendor       Vendor?
+}
+
+model Vendor {
+  id             String   @id @default(cuid())
+  userId         String?  @unique
+  name           String
+  city           String
+  verified       Boolean  @default(false)
+  booksSold      Int      @default(0)
+  authenticity   Float    @default(0)
+  onTimeDelivery Float    @default(0)
+  returnRate     Float    @default(0)
+  disputeRate    Float    @default(0)
+  activeSince    DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  books          Book[]
+  createdAt      DateTime @default(now())
+}
+
+model Book {
+  id            String      @id
+  title         String
+  author        String
+  coverUrl      String
+  isbn          String?
+  price         Float?
+  originalPrice Float?
+  rating        Float?
+  reviews       Int?
+  stock         Int?
+  status        String      @default("in-stock")
+  badge         String?
+  category      String
+  format        String
+  sellerCount   Int         @default(1)
+  active        Boolean     @default(true)
+  vendorId      String?
+  vendor        Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id       String @id @default(cuid())
+  cartId   String
+  bookId   String
+  quantity Int    @default(1)
+  cart     Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, bookId])
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  userId    String
+  status    OrderStatus @default(PLACED)
+  total     Float
+  user      User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  bookId    String
+  title     String
+  unitPrice Float
+  quantity  Int
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  book      Book   @relation(fields: [bookId], references: [id], onDelete: Restrict)
+}
