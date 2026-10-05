@@ -1,8 +1,21 @@
+import { cpus, totalmem } from 'node:os'
 import type { NextConfig } from 'next'
+
+/**
+ * Turbopack worker count.
+ *
+ * Hard-coding 2 left most cores idle and made builds slow. Every worker runs
+ * its own V8 heap, though, and a worker the OS has to kill surfaces as
+ * "Panic in async function" or "Jest worker encountered N child process
+ * exceptions" rather than a useful error — so the pool is sized from the
+ * machine instead of from a constant: one core is left for the dev server and
+ * the editor, and the pool is kept inside a quarter of installed memory.
+ */
+const workerCount = Math.max(1, Math.min(cpus().length - 1, Math.floor(totalmem() / 1024 ** 3 / 4), 6))
 
 const nextConfig: NextConfig = {
   agentRules: false,
-  experimental: { cpus: 2 },
+  experimental: { cpus: workerCount },
   turbopack: {
     root: process.cwd(),
   },
