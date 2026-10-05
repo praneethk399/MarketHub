@@ -66,6 +66,14 @@ Never commit `.env` or expose database credentials. A configured database connec
 
 Product search and catalogue APIs use the relational `Product`, `Category`, and `Inventory` models when PostgreSQL is configured. In mock mode, they adapt the existing bookstore catalogue. Existing `/api/books` endpoints remain available for storefront compatibility.
 
+## Security assessment
+
+The security review dated 2026-10-06 covered the repository at baseline `b42956c` and the social-commerce integration working tree. It found no actionable source-code vulnerabilities in that reviewed scope. Two HIGH-severity transitive dependency advisories found in the initial full audit were remediated: Prisma and `@prisma/client` were updated to `6.19.3`, and the scoped `@prisma/config>deepmerge-ts` override was updated to `8.0.2`. After remediation, both `corepack pnpm audit` and `corepack pnpm audit --prod` reported no known vulnerabilities.
+
+The reviewed controls include bcrypt password hashing, opaque server-side sessions in HTTP-only SameSite cookies, server-side role and ownership checks, request validation and body-size limits, origin checks for browser mutations, rate limits on sensitive writes, and configured CSP/security headers. Regression tests also cover social privacy boundaries and verified-purchase trust signals.
+
+These results apply only to the stated review scope and assessment date; later changes have not necessarily been assessed. No dynamic penetration test or deployment validation was performed. The process-local mock store and rate limiter are not durable or shared across production instances. See the [security review](./SECURITY-REVIEW.md) for the concise findings and the [full security assessment](./docs/security-assessment.md) for scope, validation details, and limitations.
+
 ## API overview
 
 | Endpoint | Methods | Access and purpose |
