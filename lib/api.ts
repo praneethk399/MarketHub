@@ -3,26 +3,39 @@ import { DomainError } from './domain-error'
 
 export function apiError(error: unknown, message = 'The request could not be completed.') {
   if (error instanceof DomainError) {
-    return NextResponse.json({ error: error.message }, { status: error.status })
+    return apiFailure(error.message, error.status)
   }
   console.error('[MarketHub API]', error)
-  return NextResponse.json({ error: message }, { status: 500 })
+  return apiFailure(message, 500)
+}
+
+export function apiFailure(message: string, status: number) {
+  const code = status === 400 ? 'BAD_REQUEST'
+    : status === 401 ? 'UNAUTHORIZED'
+      : status === 403 ? 'FORBIDDEN'
+        : status === 404 ? 'NOT_FOUND'
+          : status === 409 ? 'CONFLICT'
+            : status === 413 ? 'PAYLOAD_TOO_LARGE'
+              : status === 429 ? 'RATE_LIMITED'
+                : status === 503 ? 'SERVICE_UNAVAILABLE'
+                  : 'INTERNAL_SERVER_ERROR'
+  return NextResponse.json({ success: false, error: { code, message } }, { status })
 }
 
 export function badRequest(message: string) {
-  return NextResponse.json({ error: message }, { status: 400 })
+  return apiFailure(message, 400)
 }
 
 export function unauthorized() {
-  return NextResponse.json({ error: 'Sign in to continue.' }, { status: 401 })
+  return apiFailure('Sign in to continue.', 401)
 }
 
 export function forbidden() {
-  return NextResponse.json({ error: 'You do not have permission to perform this action.' }, { status: 403 })
+  return apiFailure('You do not have permission to perform this action.', 403)
 }
 
 export function notFound(resource = 'Resource') {
-  return NextResponse.json({ error: `${resource} not found.` }, { status: 404 })
+  return apiFailure(`${resource} not found.`, 404)
 }
 
 export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
@@ -34,7 +47,8 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
 
   const reader = request.body?.getReader()
   if (!reader) throw new DomainError('Request body must contain valid JSON.')
-  const chunks: Uint8Array[] = []
+  const decoder = new TextDecoder()
+  let raw = ''
   let size = 0
   try {
     for (;;) {
@@ -45,14 +59,19 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
         await reader.cancel()
         throw new DomainError('Request body must be no larger than 1 MB.', 413)
       }
-      chunks.push(value)
+      raw += decoder.decode(value, { stream: true })
     }
-    body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown
+    raw += decoder.decode()
   } catch (error) {
     if (error instanceof DomainError) throw error
     throw new DomainError('Request body must contain valid JSON.')
   } finally {
     reader.releaseLock()
+  }
+  try {
+    body = JSON.parse(raw) as unknown
+  } catch {
+    throw new DomainError('Request body must contain valid JSON.')
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new DomainError('Request body must be a JSON object.')

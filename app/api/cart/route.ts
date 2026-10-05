@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { apiError, badRequest, readJsonObject } from '@/lib/api'
-import { DomainError } from '@/lib/domain-error'
 import { requireAuth, requireCustomer } from '@/lib/authorization'
 import { rateLimit } from '@/lib/rate-limit'
 import { sameOriginOnly } from '@/lib/request-security'
@@ -32,7 +31,6 @@ export async function POST(request: Request) {
     const currentQuantity = cart.items.find((item) => item.bookId === body.bookId)?.quantity ?? 0
     return NextResponse.json(await setCartQuantity(user.id, body.bookId, currentQuantity + quantity), { status: 201 })
   } catch (error) {
-    if (error instanceof DomainError) return NextResponse.json({ error: error.message }, { status: error.status })
     return apiError(error, 'Unable to update your cart.')
   }
 }

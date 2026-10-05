@@ -187,7 +187,6 @@ export async function listCatalogCategories() {
     return categories.map((name) => ({ name, slug: slugify(name) })).sort((a, b) => a.name.localeCompare(b.name))
   }
   return prisma.category.findMany({
-    where: { products: { some: { status: ProductStatus.ACTIVE, vendor: { status: VendorStatus.APPROVED } } } },
     select: { id: true, name: true, slug: true, description: true },
     orderBy: { name: 'asc' },
   })

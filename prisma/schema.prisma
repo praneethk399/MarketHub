@@ -44,6 +44,47 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+enum SocialVisibility {
+  PRIVATE
+  FRIENDS
+  PUBLIC
+}
+
+enum PurchaseVisibility {
+  PRIVATE
+  LIMITED
+}
+
+enum ListVisibility {
+  PRIVATE
+  SHARED
+  PUBLIC
+}
+
+enum ListRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum ReadingStatus {
+  NOT_STARTED
+  CURRENTLY_READING
+  FINISHED
+}
+
+enum SocialTargetType {
+  BOOK
+  PRODUCT
+}
+
 model User {
   id                 String              @id @default(cuid())
   name               String
@@ -64,6 +105,14 @@ model User {
   reviews             Review[]
   sessions            Session[]
   auditLogs           AuditLog[]
+  friendshipsRequested Friendship[] @relation("FriendshipRequester")
+  friendshipsReceived  Friendship[] @relation("FriendshipAddressee")
+  socialPrivacy        SocialPrivacy?
+  recommendationsSent  Recommendation[] @relation("RecommendationSender")
+  recommendationsReceived Recommendation[] @relation("RecommendationRecipient")
+  lists                SocialList[]
+  listMemberships      ListMember[]
+  readingProgress      ReadingProgress[]
 }
 
 model Vendor {
@@ -115,6 +164,7 @@ model Book {
   vendor        Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  reviewEntries Review[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }
@@ -174,6 +224,7 @@ model Product {
   wishlistItems   WishlistItem[]
   orderItems      OrderItem[]
   reviews         Review[]
+  priceHistory    PriceHistory[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @default(now()) @updatedAt
 
@@ -337,20 +388,152 @@ model Payment {
 }
 
 model Review {
-  id         String   @id @default(uuid())
-  productId  String
-  userId     String
-  rating     Int
-  title      String?
-  content    String
-  verified   Boolean  @default(false)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  id               String          @id @default(uuid())
+  productId        String?
+  bookId           String?
+  userId           String
+  rating           Int
+  title            String?
+  content          String
+  verified         Boolean         @default(false)
+  visibility       SocialVisibility @default(PUBLIC)
+  containsSpoilers Boolean         @default(false)
+  product          Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  book             Book?           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @default(now()) @updatedAt
 
   @@unique([productId, userId])
+  @@unique([bookId, userId])
   @@index([productId, createdAt])
+  @@index([bookId, createdAt])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+model SocialPrivacy {
+  userId               String             @id
+  reviews              SocialVisibility   @default(PUBLIC)
+  purchases            PurchaseVisibility @default(PRIVATE)
+  reading              SocialVisibility   @default(PRIVATE)
+  defaultListVisibility ListVisibility    @default(PRIVATE)
+  updatedAt            DateTime           @default(now()) @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Recommendation {
+  id          String           @id @default(cuid())
+  senderId    String
+  recipientId String
+  targetType  SocialTargetType
+  targetId    String
+  message     String?
+  createdAt   DateTime         @default(now())
+  sender      User             @relation("RecommendationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User             @relation("RecommendationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, recipientId, targetType, targetId])
+  @@index([recipientId, createdAt])
+  @@index([targetType, targetId])
+}
+
+model SocialList {
+  id          String         @id @default(cuid())
+  ownerId     String
+  title       String
+  description String?
+  visibility  ListVisibility  @default(PRIVATE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
+  owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items       ListItem[]
+  members     ListMember[]
+
+  @@index([ownerId])
+  @@index([visibility])
+}
+
+model ListItem {
+  id           String           @id @default(uuid())
+  listId       String
+  targetType   SocialTargetType
+  targetId     String
+  addedById    String?
+  note         String?
+  preferred    Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  list         SocialList       @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model ListMember {
+  id        String     @id @default(uuid())
+  listId    String
+  userId    String
+  role      ListRole   @default(VIEWER)
+  createdAt DateTime   @default(now())
+  list      SocialList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, userId])
+  @@index([userId])
+}
+
+model ReadingProgress {
+  id                String          @id @default(uuid())
+  userId            String
+  targetType        SocialTargetType @default(BOOK)
+  targetId          String
+  status            ReadingStatus   @default(NOT_STARTED)
+  progressPercentage Int            @default(0)
+  notes             String?
+  visibility        SocialVisibility @default(PRIVATE)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @default(now()) @updatedAt
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId, visibility])
+}
+
+model PriceHistory {
+  id         String   @id @default(uuid())
+  productId  String
+  price      Decimal  @db.Decimal(10, 2)
+  recordedAt DateTime @default(now())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, recordedAt])
+}
+
+model SecuritySignal {
+  id        String   @id @default(uuid())
+  type      String
+  severity  String   @default("LOW")
+  subject   String
+  subjectId String?
+  count     Int      @default(1)
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([subject, createdAt])
 }
 
 model Session {

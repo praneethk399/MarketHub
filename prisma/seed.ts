@@ -5,6 +5,16 @@ import { initialVendors } from '../lib/mock-store'
 const prisma = new PrismaClient()
 
 async function main() {
+  const categories = [...new Set(books.map((book) => book.category))]
+  for (const name of categories) {
+    const slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    await prisma.category.upsert({
+      where: { name },
+      create: { name, slug },
+      update: { slug },
+    })
+  }
+
   for (const vendor of initialVendors) {
     await prisma.vendor.upsert({
       where: { id: vendor.id },
@@ -55,7 +65,7 @@ async function main() {
     await prisma.book.upsert({ where: { id: book.id }, create: { id: book.id, ...data }, update: data })
   }
 
-  console.log(`Seeded ${books.length} books and ${initialVendors.length} sellers.`)
+  console.log(`Seeded ${books.length} books, ${categories.length} categories, and ${initialVendors.length} sellers.`)
 }
 
 main()

@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse } from 'next/server'
+import { apiFailure } from './api'
 
 type RateWindow = { count: number; resetAt: number }
 type RateLimitOptions = { limit: number; windowMs: number; namespace: string }
@@ -31,8 +32,7 @@ export function rateLimit(request: Request, options: RateLimitOptions): NextResp
 
   if (window.count <= options.limit) return null
   const retryAfter = Math.max(1, Math.ceil((window.resetAt - now) / 1000))
-  return NextResponse.json(
-    { error: 'Too many requests. Please try again later.' },
-    { status: 429, headers: { 'Retry-After': String(retryAfter) } },
-  )
+  const response = apiFailure('Too many requests. Please try again later.', 429)
+  response.headers.set('Retry-After', String(retryAfter))
+  return response
 }

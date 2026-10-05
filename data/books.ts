@@ -10,6 +10,7 @@ export type Book = {
   reviews?: number
   stock?: number | null
   sellerCount: number
+  vendorId?: string | null
   status: 'in-stock' | 'out-of-stock'
   badge?: string
   category: string

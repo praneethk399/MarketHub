@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { apiError, badRequest, readJsonObject } from '@/lib/api'
-import { DomainError } from '@/lib/domain-error'
 import { requireAuth, requireCustomer } from '@/lib/authorization'
 import { rateLimit } from '@/lib/rate-limit'
 import { sameOriginOnly } from '@/lib/request-security'
@@ -22,7 +21,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
     const { bookId } = await params
     return NextResponse.json(await setCartQuantity(user.id, bookId, body.quantity))
   } catch (error) {
-    if (error instanceof DomainError) return NextResponse.json({ error: error.message }, { status: error.status })
     return apiError(error, 'Unable to update your cart.')
   }
 }

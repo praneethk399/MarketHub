@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { apiError, badRequest, readJsonObject } from '@/lib/api'
 import { isDatabaseConfigured } from '@/lib/prisma'
-import { DomainError } from '@/lib/domain-error'
 import { sameOriginOnly } from '@/lib/request-security'
 import { requireAdmin, requireAuth } from '@/lib/authorization'
 import { listProducts, saveProduct } from '@/services/products'
@@ -54,7 +53,6 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ data: await saveProduct(book) }, { status: 201 })
   } catch (error) {
-    if (error instanceof DomainError) return NextResponse.json({ error: error.message }, { status: error.status })
     return apiError(error, 'Unable to create the book.')
   }
 }

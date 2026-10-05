@@ -131,7 +131,21 @@ export async function checkout(userId: string) {
       throw new DomainError(`There is not enough stock for ${item.title}.`)
     }
   })
-  const order = { id: createMockId(), userId, status: 'PLACED' as const, total: cart.subtotal, createdAt: new Date().toISOString(), items }
+  const order = {
+    id: createMockId(),
+    userId,
+    status: 'PLACED' as const,
+    total: cart.subtotal,
+    createdAt: new Date().toISOString(),
+    items,
+    payment: {
+      amount: cart.subtotal,
+      currency: 'INR' as const,
+      status: 'PAID' as const,
+      method: 'SIMULATED' as const,
+      transactionReference: `SIM-${randomBytes(4).toString('hex').toUpperCase()}`,
+    },
+  }
   mockStore.orders.unshift(order)
   mockStore.carts.set(userId, new Map())
   items.forEach((item, index) => {
@@ -213,6 +227,7 @@ export async function cancelOrder(userId: string, orderId: string) {
     }
   }
   order.status = 'CANCELLED'
+  if (order.payment?.status === 'PAID') order.payment.status = 'REFUNDED'
   mockStore.auditLogs.push({
     userId, action: 'ORDER_CANCELLED', entity: 'Order', entityId: orderId, createdAt: new Date().toISOString(),
   })

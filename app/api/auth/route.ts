@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { apiError, badRequest, readJsonObject, unauthorized } from '@/lib/api'
-import { DomainError } from '@/lib/domain-error'
 import { firstValidationError, authRequestSchema } from '@/lib/validation'
 import { rateLimit } from '@/lib/rate-limit'
 import { sameOriginOnly } from '@/lib/request-security'
@@ -34,7 +33,6 @@ export async function POST(request: Request) {
     await recordAuditEvent(user.id, input.action === 'register' ? 'USER_REGISTERED' : 'USER_LOGIN', 'User', user.id, request)
     return await setSessionCookie(NextResponse.json({ success: true, data: { user }, user }), user)
   } catch (error) {
-    if (error instanceof DomainError) return NextResponse.json({ error: error.message }, { status: error.status })
     return apiError(error, 'Unable to complete authentication.')
   }
 }
