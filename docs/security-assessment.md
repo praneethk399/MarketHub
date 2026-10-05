@@ -122,10 +122,10 @@ The static source review covered authentication, authorization, input validation
 
 The full dependency audit did identify two HIGH-severity advisories in the dependency tree:
 
-| # | Severity | Package (resolved version) | Advisory / issue | Dependency path | Recommended action |
-| --- | --- | --- | --- | --- | --- |
-| 1 | HIGH | `effect` `3.18.4` | [GHSA-38f7-945m-qr2g](https://github.com/advisories/GHSA-38f7-945m-qr2g): `AsyncLocalStorage` context may be lost or contaminated in concurrent RPC work; affected versions `<3.20.0` | `@prisma/config@6.19.0` through Prisma | Upgrade to a compatible Prisma release that resolves `effect` to `>=3.20.0`, then rerun the audit and validation. |
-| 2 | HIGH | `deepmerge-ts` `7.1.5` | [GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx): stack exhaustion when merging recursive object graphs; affected versions `<8.0.0` | `@prisma/config@6.19.0` through Prisma | Upgrade to a compatible Prisma release that resolves `deepmerge-ts` to `>=8.0.0`, then rerun the audit and validation. |
+| # | Severity | Package (resolved version) | Lockfile line | Advisory / issue | Dependency path | Recommended action |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | HIGH | `effect` `3.18.4` | `pnpm-lock.yaml:782` | [GHSA-38f7-945m-qr2g](https://github.com/advisories/GHSA-38f7-945m-qr2g): `AsyncLocalStorage` context may be lost or contaminated in concurrent RPC work; affected versions `<3.20.0` | `@prisma/config@6.19.0` through Prisma | Upgrade to a compatible Prisma release that resolves `effect` to `>=3.20.0`, then rerun the audit and validation. |
+| 2 | HIGH | `deepmerge-ts` `7.1.5` | `pnpm-lock.yaml:764` | [GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx): stack exhaustion when merging recursive object graphs; affected versions `<8.0.0` | `@prisma/config@6.19.0` through Prisma | Upgrade to a compatible Prisma release that resolves `deepmerge-ts` to `>=8.0.0`, then rerun the audit and validation. |
 
 `corepack pnpm audit --prod` reported no known vulnerabilities in the production-only dependency audit. The two advisories above were reported by the full dependency audit. Confirm reachability and production impact after selecting compatible patched Prisma dependencies.
 
