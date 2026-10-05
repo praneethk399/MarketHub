@@ -11,6 +11,17 @@ See the [MarketHub project presentation](./docs/presentations/MarketHub-Secure-B
 - Node.js 20.9 or newer
 - Corepack-enabled `pnpm`
 
+## Downloaded source archive
+
+After extracting the project ZIP, open a terminal in the extracted `markethub` folder and install dependencies before starting the app:
+
+```powershell
+corepack pnpm install
+corepack pnpm dev
+```
+
+The source archive does not include Git history, installed dependencies, or generated build output. Keep `.env` files and other credentials out of shared archives.
+
 ## Run locally
 
 ```powershell
@@ -41,9 +52,11 @@ Never commit `.env` or expose database credentials. A configured database connec
 ## Marketplace capabilities
 
 - Search, filter, and sort the book catalogue.
+- Browse the Open Library-backed catalogue and compare offers from active sellers.
 - Register and sign in; authentication uses HTTP-only, SameSite cookies backed by expiring server-side sessions.
 - Add and update book or product cart items; checkout calculates prices on the server and updates inventory in a database transaction.
 - Use wishlists and manage customer-owned addresses.
+- Organize books on personal reading shelves and track reading progress in `/library`.
 - Submit vendor applications; administrators can approve or reject applications and suspend vendors.
 - Approved vendors can manage products, images, and inventory through scoped APIs.
 - Customers can review products only after a non-cancelled purchase; each customer may review a product once.
