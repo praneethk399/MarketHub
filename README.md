@@ -47,6 +47,8 @@ Never commit `.env` or expose database credentials. A configured database connec
 - Submit vendor applications; administrators can approve or reject applications and suspend vendors.
 - Approved vendors can manage products, images, and inventory through scoped APIs.
 - Customers can review products only after a non-cancelled purchase; each customer may review a product once.
+- Book detail pages combine verified-purchase reviews, privacy-scoped friend signals, seller/product passports, seller comparisons, and a read-only shopping advisor.
+- The `/social` hub supports friend requests, privacy settings, shared lists, reading progress, and private recommendations.
 - Checkout records a simulated INR payment; it does not charge a payment provider.
 
 Product search and catalogue APIs use the relational `Product`, `Category`, and `Inventory` models when PostgreSQL is configured. In mock mode, they adapt the existing bookstore catalogue. Existing `/api/books` endpoints remain available for storefront compatibility.
@@ -67,6 +69,25 @@ Product search and catalogue APIs use the relational `Product`, `Category`, and 
 | `/api/categories` | GET | List categories with active products |
 | `/api/books` | GET, POST | Browse the legacy catalogue; admins can add a book |
 | `/api/books/:id` | GET, DELETE | Read or deactivate a legacy book |
+| `/api/books/:id/social` | GET | Read community reviews and viewer-scoped social signals |
+| `/api/books/:id/reviews` | GET, POST | Read visible reviews or submit a verified-purchase review |
+| `/api/books/:id/passport` | GET | Read product and seller trust information |
+| `/api/products/:slug/social` | GET | Read community reviews and viewer-scoped social signals |
+| `/api/products/:slug/passport` | GET | Read product and seller trust information |
+| `/api/products/:slug/sellers` | GET | Compare active sellers for the same ISBN |
+| `/api/vendors/:id/passport` | GET | Read public seller trust information |
+| `/api/social/friends` | GET, POST | List friends or send a friend request |
+| `/api/social/friends/:id` | PATCH, DELETE | Respond to or remove a friendship |
+| `/api/social/recommendations` | GET, POST | Read or send recipient-scoped recommendations |
+| `/api/privacy` | GET, PATCH | Read or update social privacy settings |
+| `/api/lists` | GET, POST | List or create private/shared reading lists |
+| `/api/lists/:id` | GET, PATCH, DELETE | Read or manage an authorized list |
+| `/api/lists/:id/items` | POST | Add a list item |
+| `/api/lists/:id/items/:itemId` | DELETE | Remove a list item |
+| `/api/lists/:id/members` | POST | Add a list member |
+| `/api/lists/:id/members/:userId` | PATCH, DELETE | Update/remove a list member |
+| `/api/reading-progress` | GET, POST | Read or update privacy-scoped reading progress |
+| `/api/ai/chat` | POST | Run the deterministic, read-only shopping advisor |
 | `/api/cart` | GET, POST | Read or update legacy book cart lines |
 | `/api/cart/:bookId` | PATCH, DELETE | Update or remove a legacy book cart line |
 | `/api/cart/items` | POST | Add a product to the cart |
@@ -97,6 +118,8 @@ Private operations derive identity from the server-side session. Vendor product 
 | --- | --- |
 | `corepack pnpm dev` | Start the development server |
 | `corepack pnpm build` | Build and type-check the Next.js app |
+| `corepack pnpm typecheck` | Run the TypeScript checker |
+| `corepack pnpm test` | Run unit and social privacy/security regression tests |
 | `corepack pnpm start` | Start the production server |
 | `corepack pnpm db:generate` | Generate Prisma Client |
 | `corepack pnpm db:push` | Apply the Prisma schema |
@@ -106,5 +129,7 @@ Private operations derive identity from the server-side session. Vendor product 
 ## Architecture and security notes
 
 See the [backend architecture guide](./docs/backend-architecture.md) and [Prisma schema](./prisma/schema.prisma). Authentication secrets are not stored in browser storage; passwords use bcrypt for new accounts, with legacy scrypt hashes upgraded at successful sign-in. Mutating cookie-authenticated routes validate request origin, sensitive endpoints are rate-limited, and security headers are configured in Next.js.
+
+Social data is filtered in services by both review/list visibility and account-level privacy. Private reading notes are returned only to their owner; network review badges disclose friends-only completion only to accepted friends. Demo social accounts, review/order fixtures, and comparison offers are limited to non-production mock mode/seeding.
 
 The rate limiter and mock persistence are process-local. Use a shared rate-limit store and durable PostgreSQL before deploying multiple application instances. Payment is simulated, not a real payment integration. The project includes API capabilities that are not yet surfaced in a complete vendor/admin dashboard UI.

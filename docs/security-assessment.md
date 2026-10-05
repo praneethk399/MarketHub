@@ -5,7 +5,7 @@
 **Repository:** https://github.com/praneethk399/MarketHub
 
 **Branch and assessed commit:** `main`, `b42956c`
-**Assessment scope:** Committed repository plus the working-tree files present during review. Twelve service files were untracked and reviewed. Five late-appearing service modules (`sellerPassport.service.ts`, `productPassport.service.ts`, `sellerComparison.service.ts`, `ai.service.ts`, and `social.service.ts`) received separate follow-up reviews. The later changes to `lib/validation.ts` and `services/reviews.ts` were also reviewed. Fifteen untracked API route files that appeared after the remediation commit were separately reviewed. These application files are not included in this report's commits.
+**Assessment scope:** Committed repository plus the social-commerce integration working tree, including its API routes, services, UI, schema additions, seed behavior, and regression tests. This document preserves the original dependency findings and records integration follow-up validation below.
 
 > This record follows the sections in the supplied Build Secure Technical Project & Security Documentation template. Unknown project/team/deployment details are marked as not provided rather than inferred.
 
@@ -18,7 +18,7 @@
 | Team members | Not provided |
 | Domain | Web application; e-commerce / independent-bookstore marketplace |
 | Problem statement | Independent bookstores and readers need a marketplace to discover books and manage purchases and related account activity. A more specific hackathon problem statement was not provided. |
-| Solution summary | A Next.js marketplace with book and product discovery, customer accounts, carts, checkout, orders, wishlists, addresses, reviews, and vendor-management APIs. It supports a local catalogue and optional PostgreSQL persistence. Checkout records simulated payment; no payment provider is integrated. |
+| Solution summary | A Next.js marketplace with book and product discovery, customer accounts, carts, checkout, orders, wishlists, addresses, reviews, vendor-management APIs, and integrated social-shopping features. It supports a local catalogue and optional PostgreSQL persistence. Checkout records simulated payment; no payment provider is integrated. |
 
 ## 2. Team Roles & Contributions
 
@@ -83,7 +83,7 @@ The browser communicates with the Next.js application. Route Handlers apply requ
 | Orders and addresses | Customer-scoped order and address APIs |
 | Wishlists and reviews | Customer wishlist; reviews are intended to require a qualifying purchase |
 | Vendor marketplace | Vendor applications, product management, and administrative approval/suspension APIs |
-| Social and privacy services | Additional service modules were present in the working tree and included in the static review; these modules remain untracked at the assessment commit |
+| Social and privacy services | Friendships, privacy controls, shared lists, recommendations, reading progress, trusted reviews, seller/product passports, comparisons, and a read-only shopping advisor; backed by service-level visibility and authorization checks |
 
 ## 6. Security Implementation
 
@@ -118,7 +118,7 @@ flowchart LR
 
 ### Security validation and findings
 
-The static source review covered authentication, authorization, input validation, Prisma access, request-origin checks, rate limiting, configuration/secrets, security headers, API routes, and the working-tree service files. It found **no actionable source-code vulnerabilities** in the reviewed scope. Follow-up reviews also found no exploitable issues in the late-appearing service modules, validation/review changes, or fifteen API routes that appeared later. Mutating routes in that later batch require a customer session, check request origin, and validate bodies where applicable; list and friendship permissions are delegated to scoped services. No callers or API routes exposing the `ai.service.ts`, `productPassport.service.ts`, or `sellerComparison.service.ts` entry points were found at review time. Static review is not proof that the application is free of vulnerabilities.
+The static source review covered authentication, authorization, input validation, Prisma access, request-origin checks, rate limiting, configuration/secrets, security headers, API routes, and social-commerce services. Integration follow-up found and fixed a privacy-scope defect where friends-only reading completion could be reflected beside a public review to a non-friend. Regression tests verify accepted-friend visibility while preserving public completion visibility. Finished badges are restricted to authors with verified-purchase reviews. Seller satisfaction scores exclude unverified reviews; ISBN scoring checks the checksum and does not claim physical-item authenticity. Demo social accounts and fixtures are disabled in production. No currently actionable source-code vulnerabilities were identified in the reviewed scope. Static review is not proof that the application is free of vulnerabilities.
 
 The initial full dependency audit identified two HIGH-severity dependency advisories. Both were remediated by updating Prisma and constraining the vulnerable transitive package to a patched release:
 
@@ -135,7 +135,7 @@ No dynamic penetration test was run. Strix was not run because Docker was unavai
 
 ### Testing approach
 
-Validation used the repository's existing package manager and schema tooling, a production build attempt, and a read-only static source security review. No test files or test script were present in the inspected repository inventory.
+Validation used the repository's package manager, automated social privacy/security tests, TypeScript checking, a production build, dependency audit, Prisma schema validation, and static source review.
 
 ### Test cases / scenarios
 
@@ -145,11 +145,13 @@ Validation used the repository's existing package manager and schema tooling, a 
 | `corepack pnpm audit --prod` | No known production dependency advisories | No known vulnerabilities found before or after remediation | Pass |
 | `corepack pnpm audit` | No known advisories across dependency groups | Initial audit found two HIGH advisories; after remediation, no known vulnerabilities found | Pass after remediation |
 | `npm audit --omit=dev --no-fund --no-progress` | Audit using an npm lockfile | Could not run: this project has `pnpm-lock.yaml`, not `package-lock.json` | Not applicable; pnpm audit was used |
-| `npm run build` | Production build and TypeScript validation succeed | A build passed after dependency remediation. After additional untracked API routes appeared, the latest build compiled but type-checking failed at `app/api/lists/[id]/route.ts:32:83`: nullable `description` is incompatible with the service input type. | Fail on latest workspace |
+| `corepack pnpm test` | Automated tests pass | 24 tests passed, including privacy, access-control, verified-review trust, seller comparison, AI allowlist, and telemetry cases | Pass |
+| `corepack pnpm typecheck` | TypeScript validation succeeds | Completed successfully | Pass |
+| `corepack pnpm build` | Production build succeeds | Integrated workspace compiled and generated all pages/routes successfully | Pass |
 | Prisma schema validation with a placeholder `DATABASE_URL` | Schema validates without contacting a database | Prisma 6.19.3 reported the schema is valid | Pass |
 | Dynamic penetration scan | Runtime scan completes against an authorized target | Not run: Docker/Strix prerequisites and a deployed target were unavailable | Not run |
 
-The successful Prisma schema check used a placeholder URL and did not connect to a database. No automated test suite was available in the inspected repository. The latest build failure is in an untracked API route and was not included in the remediation commit.
+The successful Prisma schema check used a placeholder URL and did not connect to a database. The test suite does not replace dynamic pentesting or production database/integration testing.
 
 ## 8. Deployment & Final Validation
 
@@ -158,10 +160,10 @@ The successful Prisma schema check used a placeholder URL and did not connect to
 | Repository URL | https://github.com/praneethk399/MarketHub |
 | Deployment URL | Not provided |
 | Deployment process | Not verified; see the project README for local setup and optional PostgreSQL instructions |
-| Final application state | Prisma schema validation succeeded; the latest production build is blocked by the TypeScript error in the untracked list API route described above |
+| Final application state | 24 automated tests, TypeScript checking, production build, and full dependency audit passed; Prisma schema validation succeeded without a database connection |
 | Security status | Static source review found no actionable code-level vulnerability; both initially reported HIGH dependency advisories are remediated and both final pnpm audits are clean |
-| Known unresolved issues | Fix the TypeScript mismatch in `app/api/lists/[id]/route.ts`; no dynamic penetration scan or deployment validation was performed; team and deployment details were not supplied; untracked application files remain outside the report/remediation commits |
+| Known unresolved issues | No dynamic penetration scan or deployment validation was performed; team and deployment details were not supplied; the process-local mock store and rate limiter are not multi-instance production controls |
 
 ### Final validation
 
-The full and production-only dependency audits, Prisma schema validation, production build attempts, and static source reviews were completed and recorded above. The latest workspace build did not pass; the application was not deployed or runtime penetration-tested. Team and deployment details should be completed before presenting this as final project-submission documentation.
+The full dependency audit, Prisma schema validation, tests, type check, production build, and static source reviews are recorded above. The application was not deployed or runtime penetration-tested. Team and deployment details should be completed before presenting this as final project-submission documentation.
