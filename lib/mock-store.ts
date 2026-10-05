@@ -353,6 +353,28 @@ function seedDemoSocial(store: MockStore) {
     visibility: 'PRIVATE', createdAt: daysAgo(80), updatedAt: daysAgo(60),
   })
 
+  // Demo shelves for the reading-room UI: currently reading, next up, finished.
+  const shelf = (targetId: string, status: MockReadingProgress['status'], progressPercentage: number, days: number, visibility: MockReadingProgress['visibility'] = 'PRIVATE') => {
+    store.readingProgress.push({
+      id: createMockId(), userId: ava.id, targetType: 'BOOK', targetId, status, progressPercentage,
+      notes: null, visibility, createdAt: daysAgo(days + 5), updatedAt: daysAgo(days),
+    })
+  }
+  shelf('atomic-habits', 'CURRENTLY_READING', 62, 1, 'FRIENDS')
+  shelf('hobbit', 'CURRENTLY_READING', 18, 3)
+  shelf('psychology-money', 'CURRENTLY_READING', 75, 2, 'FRIENDS')
+  shelf('song-achilles', 'NOT_STARTED', 0, 6)
+  shelf('midnight-library', 'NOT_STARTED', 0, 6)
+  shelf('immortals', 'NOT_STARTED', 0, 8)
+  shelf('murder-orient', 'NOT_STARTED', 0, 9)
+  shelf('alchemist', 'NOT_STARTED', 0, 11)
+  shelf('book-thief', 'NOT_STARTED', 0, 12)
+  shelf('secret-garden', 'FINISHED', 100, 14)
+  shelf('pride-prejudice', 'FINISHED', 100, 16)
+  shelf('great-gatsby', 'FINISHED', 100, 18)
+  shelf('jane-eyre', 'FINISHED', 100, 21)
+  shelf('ikigai', 'FINISHED', 100, 24)
+
   // Demo marketplace offers from other vendors for the same ISBN, so seller
   // comparison has real rows to group (grouping key = ISBN only).
   const offers: { isbn: string; title: string; vendorIndex: number; price: number; id: string }[] = [

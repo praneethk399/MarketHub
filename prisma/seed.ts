@@ -155,10 +155,24 @@ async function seedDemoSocial() {
     },
   })
 
-  // Reading progress (private by default).
+  // Reading progress (private by default) — fills the demo shelves.
   await prisma.readingProgress.createMany({
     data: [
       { userId: ava, targetType: 'BOOK', targetId: 'deep-work', status: 'CURRENTLY_READING', progressPercentage: 34, notes: 'Private notes stay private.', visibility: 'FRIENDS' },
+      { userId: ava, targetType: 'BOOK', targetId: 'atomic-habits', status: 'CURRENTLY_READING', progressPercentage: 62, visibility: 'FRIENDS' },
+      { userId: ava, targetType: 'BOOK', targetId: 'hobbit', status: 'CURRENTLY_READING', progressPercentage: 18, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'psychology-money', status: 'CURRENTLY_READING', progressPercentage: 75, visibility: 'FRIENDS' },
+      { userId: ava, targetType: 'BOOK', targetId: 'song-achilles', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'midnight-library', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'immortals', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'murder-orient', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'alchemist', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'book-thief', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'secret-garden', status: 'FINISHED', progressPercentage: 100, visibility: 'FRIENDS' },
+      { userId: ava, targetType: 'BOOK', targetId: 'pride-prejudice', status: 'FINISHED', progressPercentage: 100, visibility: 'FRIENDS' },
+      { userId: ava, targetType: 'BOOK', targetId: 'great-gatsby', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'jane-eyre', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'ikigai', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
       { userId: rahul, targetType: 'BOOK', targetId: 'hobbit', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
     ],
   })

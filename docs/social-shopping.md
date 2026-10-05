@@ -160,7 +160,26 @@ reading progress, plus ISBN-shared offers from other sellers for comparison and
 price history. Everything is real rows in the store: no hard-coded trust
 numbers are rendered anywhere.
 
-## 9. Tests
+## 9. My library (reading room UI)
+
+`/library` renders the reader's shelves using the existing reading-progress data:
+Currently reading, Next up (tracked `NOT_STARTED` items plus purchased books
+with no reading record yet) and Finished. Layout and styling live in a scoped
+`.library-*` / `.shelf-*` block in `app/globals.css`, so the dark storefront
+styling is untouched — the cream reading room is an inset surface inside the
+existing shell.
+
+- `services/library.service.ts` joins progress with catalogue metadata for the
+  session viewer only (never a client-supplied id), so private shelves stay private.
+- `components/library/library-shell.tsx` provides the sidebar, Continue reading
+  card, pill tabs, search, wooden shelves and the All books grid.
+- `components/library/library-controls.tsx` adds “Next up / Reading / Finished”
+  controls plus a visibility selector on the product page.
+- Shelves degrade gracefully: signed-out or empty shelves show an explanatory
+  empty state rather than a broken layout, and on narrow screens each shelf
+  scrolls horizontally instead of overflowing.
+
+## 10. Tests
 
 `tests/social-security.test.ts` (node:test, run with `pnpm test`) covers:
 
@@ -179,7 +198,7 @@ numbers are rendered anywhere.
 * MarketShield: signals recorded, telemetry absent from customer payloads
 * reading progress: private by default, notes never leak
 
-## 10. Known limitations
+## 11. Known limitations
 
 * Seller-side warranty/return-policy fields do not exist in the schema yet, so
   the passport and comparison display “Not specified” instead of inventing

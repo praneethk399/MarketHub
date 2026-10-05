@@ -7,6 +7,7 @@ import { useStorefront } from '@/components/storefront'
 import { BookSocial } from '@/components/social/book-social'
 import { PassportPanel } from '@/components/social/passport-panel'
 import { AiAdvisor } from '@/components/social/ai-advisor'
+import { LibraryControls } from '@/components/library/library-controls'
 
 /**
  * Product detail page (spec §34/§35): product info → friends' reviews →
@@ -49,6 +50,7 @@ export function BookDetail({ book }: { book: Book }) {
             <Heart size={16} aria-hidden="true" /> {saved ? 'Saved' : 'Save for later'}
           </button>
         </div>
+        <LibraryControls bookId={book.id} />
         <p className="social-meta">Checkout, orders and payments continue through the existing secure MarketHub cart and checkout flow.</p>
       </div>
     </header>
