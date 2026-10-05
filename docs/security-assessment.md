@@ -5,7 +5,7 @@
 **Repository:** https://github.com/praneethk399/MarketHub
 
 **Branch and assessed commit:** `main`, `b42956c`
-**Assessment scope:** Committed repository plus the working-tree service files present during review. Seven service files were untracked at assessment time and are not included in this report's commit.
+**Assessment scope:** Committed repository plus the working-tree service files present during review. Eight service files were untracked and reviewed; `sellerPassport.service.ts` appeared after the initial pass and received a separate follow-up review. These service files are not included in this report's commits.
 
 > This record follows the sections in the supplied Build Secure Technical Project & Security Documentation template. Unknown project/team/deployment details are marked as not provided rather than inferred.
 
