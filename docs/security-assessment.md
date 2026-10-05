@@ -5,7 +5,7 @@
 **Repository:** https://github.com/praneethk399/MarketHub
 
 **Branch and assessed commit:** `main`, `b42956c`
-**Assessment scope:** Committed repository plus the working-tree service files present during review. Eight service files were untracked and reviewed; `sellerPassport.service.ts` appeared after the initial pass and received a separate follow-up review. These service files are not included in this report's commits.
+**Assessment scope:** Committed repository plus the working-tree service files present during review. Ten service files were untracked and reviewed; `sellerPassport.service.ts`, `productPassport.service.ts`, and `sellerComparison.service.ts` appeared after earlier passes and received separate follow-up reviews. These service files are not included in this report's commits.
 
 > This record follows the sections in the supplied Build Secure Technical Project & Security Documentation template. Unknown project/team/deployment details are marked as not provided rather than inferred.
 
@@ -118,7 +118,7 @@ flowchart LR
 
 ### Security validation and findings
 
-The static source review covered authentication, authorization, input validation, Prisma access, request-origin checks, rate limiting, configuration/secrets, security headers, API routes, and the working-tree service files. It found **no actionable source-code vulnerabilities** in the reviewed scope. Static review is not proof that the application is free of vulnerabilities.
+The static source review covered authentication, authorization, input validation, Prisma access, request-origin checks, rate limiting, configuration/secrets, security headers, API routes, and the working-tree service files. It found **no actionable source-code vulnerabilities** in the reviewed scope. The late-appearing `productPassport.service.ts` and `sellerComparison.service.ts` modules also received separate read-only reviews; no callers or API routes exposing these two services were found at review time. Static review is not proof that the application is free of vulnerabilities.
 
 The full dependency audit did identify two HIGH-severity advisories in the dependency tree:
 
