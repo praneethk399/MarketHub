@@ -64,7 +64,7 @@ export type MockReview = {
   rating: number
   title: string | null
   content: string
-  verified: true
+  verified: boolean
   visibility?: 'PRIVATE' | 'FRIENDS' | 'PUBLIC'
   containsSpoilers?: boolean
   createdAt: string
@@ -241,6 +241,7 @@ export const demoCredentials = {
 }
 
 function seedDemoSocial(store: MockStore) {
+  if (process.env.NODE_ENV === 'production') return
   if (store.users.size > 0) return // demo data is only seeded on a fresh store
   const passwordHash = hashSync('Demo1234!', 10)
   for (const [key, account] of Object.entries(demoCredentials)) {
@@ -292,7 +293,7 @@ function seedDemoSocial(store: MockStore) {
   // Demo orders: each vendor gets >=5 orders covering delivered, shipped,
   // placed and cancelled/refunded outcomes so seller passport metrics are
   // derived from real rows rather than invented.
-  const statuses: MockOrder['status'][] = ['DELIVERED', 'DELIVERED', 'DELIVERED', 'SHIPPED', 'PLACED', 'CANCELLED']
+  const statuses: MockOrder['status'][] = ['DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED', 'SHIPPED', 'PLACED', 'CANCELLED']
   const reviewers = [ava, rahul, ananya, kiran]
   initialVendors.forEach((vendor, vendorIndex) => {
     const vendorBooks = [...store.books.values()].filter((book) => book.vendorId === vendor.id)
@@ -351,6 +352,23 @@ function seedDemoSocial(store: MockStore) {
     status: 'FINISHED', progressPercentage: 100, notes: null,
     visibility: 'PRIVATE', createdAt: daysAgo(80), updatedAt: daysAgo(60),
   })
+
+  // Demo marketplace offers from other vendors for the same ISBN, so seller
+  // comparison has real rows to group (grouping key = ISBN only).
+  const offers: { isbn: string; title: string; vendorIndex: number; price: number; id: string }[] = [
+    { id: 'offer-secret-garden-old-town', isbn: '9780141182186', title: 'The Secret Garden', vendorIndex: 1, price: 285 },
+    { id: 'offer-secret-garden-chapter-house', isbn: '9780141182186', title: 'The Secret Garden', vendorIndex: 2, price: 315 },
+    { id: 'offer-hobbit-old-town', isbn: '9780261103283', title: 'The Hobbit', vendorIndex: 1, price: 385 },
+    { id: 'offer-atomic-habits-paper-ink', isbn: '9780735211292', title: 'Atomic Habits', vendorIndex: 0, price: 529 },
+    { id: 'offer-atomic-habits-chapter-house', isbn: '9780735211292', title: 'Atomic Habits', vendorIndex: 2, price: 559 },
+  ]
+  for (const offer of offers) {
+    store.offers.push({
+      id: offer.id, isbn: offer.isbn, title: offer.title,
+      vendorId: initialVendors[offer.vendorIndex].id, price: offer.price,
+      format: 'paperback', status: 'ACTIVE', isDemo: true,
+    })
+  }
 }
 
 const globalForStore = globalThis as typeof globalThis & { marketHubMockStore?: MockStore }

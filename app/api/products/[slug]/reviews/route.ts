@@ -4,14 +4,17 @@ import { requireAuth, requireCustomer } from '@/lib/authorization'
 import { firstValidationError, reviewSchema } from '@/lib/validation'
 import { rateLimit } from '@/lib/rate-limit'
 import { sameOriginOnly } from '@/lib/request-security'
+import { readSession } from '@/services/auth'
 import { createVerifiedReview, listProductReviews } from '@/services/reviews'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params
-    const reviews = await listProductReviews(slug)
+    const viewer = await readSession()
+    void request
+    const reviews = await listProductReviews(slug, viewer?.id ?? null)
     return reviews === null
       ? notFound('Product')
       : NextResponse.json({ success: true, data: reviews })

@@ -6,34 +6,31 @@ import { books, type Book } from '@/data/books'
 import { BookCard } from './book-card'
 import { FilterSidebar, filterBooks, type FilterState } from './filter-sidebar'
 
-type Priority = '' | 'price' | 'delivery' | 'trust' | 'returns' | 'local' | 'value'
+type Priority = '' | 'price' | 'trust' | 'stock' | 'value'
 
 const priorities: { value: Priority; label: string }[] = [
   { value: '', label: 'Standard shelf order' },
   { value: 'price', label: 'Lowest Price' },
-  { value: 'delivery', label: 'Fastest Delivery' },
-  { value: 'trust', label: 'Most Trusted Seller' },
-  { value: 'returns', label: 'Best Return Policy' },
-  { value: 'local', label: 'Local Seller' },
+  { value: 'trust', label: 'Top Rated Marketplace' },
+  { value: 'stock', label: 'Most In Stock' },
   { value: 'value', label: 'Best Overall Value' }
 ]
 
-const sellerTrust: Record<string, number> = {
-  'secret-garden': 96, 'song-achilles': 94, sherlock: 97, 'forest-lullaby': 91,
-  immortals: 96, 'palace-of-illusions': 94, 'midnight-library': 97, 'atomic-habits': 96,
-  'murder-orient': 97, hobbit: 94, 'pride-prejudice': 96, 'psychology-money': 94
-}
-
+/**
+ * Shelf ordering uses real catalogue data only (price, marketplace rating,
+ * stock). Delivery windows, return policies and seller trust scores are not
+ * guessed on the shelf — they come from the Seller Passport on each product
+ * and seller page, so no fabricated trust numbers appear here (spec §52/§53).
+ */
 function sortByPriority(items: Book[], priority: Priority) {
+  if (!priority) return items
   const price = (book: Book) => book.price ?? Number.MAX_SAFE_INTEGER
   const rating = (book: Book) => book.rating ?? 0
-  const delivery = (book: Book) => book.id === 'sherlock' || book.id === 'hobbit' ? 2 : 4
-  const returnWindow = (book: Book) => book.id === 'forest-lullaby' ? 0 : book.id === 'sherlock' ? 7 : 14
-  const local = (book: Book) => ['secret-garden', 'forest-lullaby', 'immortals', 'pride-prejudice'].includes(book.id) ? 1 : 0
-  const value = (book: Book) => rating(book) * 12 + (sellerTrust[book.id] || 90) * .4 - price(book) * .02 - delivery(book)
-  const score: Record<Exclude<Priority, ''>, (book: Book) => number> = { price, delivery, trust: (book) => sellerTrust[book.id] || 90, returns: returnWindow, local, value }
-  if (priority === 'price' || priority === 'delivery') return [...items].sort((a, b) => score[priority](a) - score[priority](b))
-  return priority ? [...items].sort((a, b) => score[priority](b) - score[priority](a)) : items
+  const stock = (book: Book) => book.stock ?? 0
+  const value = (book: Book) => rating(book) * 20 - price(book) * 0.02
+  const score: Record<Exclude<Priority, ''>, (book: Book) => number> = { price, trust: rating, stock, value }
+  if (priority === 'price') return [...items].sort((a, b) => price(a) - price(b))
+  return [...items].sort((a, b) => score[priority](b) - score[priority](a))
 }
 
 function SortSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {

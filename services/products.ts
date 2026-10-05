@@ -6,7 +6,7 @@ function fromDatabase(book: {
   id: string; title: string; author: string; coverUrl: string; isbn: string | null
   price: number | null; originalPrice: number | null; rating: number | null
   reviews: number | null; stock: number | null; status: string; badge: string | null
-  category: string; format: string; sellerCount: number
+  category: string; format: string; sellerCount: number; vendorId: string | null
 }): Book {
   return {
     id: book.id, title: book.title, author: book.author, cover: book.coverUrl,
@@ -16,6 +16,7 @@ function fromDatabase(book: {
     badge: book.badge ?? undefined, category: book.category,
     format: book.format === 'hardcover' ? 'hardcover' : 'paperback',
     sellerCount: book.sellerCount,
+    vendorId: book.vendorId,
   }
 }
 

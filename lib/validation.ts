@@ -86,6 +86,53 @@ export const reviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   title: z.string().trim().min(2).max(120).optional(),
   content: z.string().trim().min(20).max(4000),
+  visibility: z.enum(['PRIVATE', 'FRIENDS', 'PUBLIC']).default('PUBLIC'),
+  containsSpoilers: z.boolean().default(false),
+}).strict()
+
+const socialEmail = z.string().trim().toLowerCase().max(254).email('Enter a valid email address.')
+const socialTargetId = z.string().trim().min(1).max(128)
+
+export const friendRequestSchema = z.object({ email: socialEmail }).strict()
+export const friendActionSchema = z.object({ action: z.enum(['accept', 'decline', 'block']) }).strict()
+
+export const recommendationSchema = z.object({
+  recipientId: z.string().trim().max(64).optional(),
+  recipientEmail: socialEmail.optional(),
+  targetType: z.enum(['BOOK', 'PRODUCT']).default('BOOK'),
+  targetId: socialTargetId,
+  message: z.string().trim().max(500).optional(),
+}).strict().refine((value) => Boolean(value.recipientId || value.recipientEmail), {
+  message: 'Choose the friend you want to recommend this to.',
+})
+
+export const listCreateSchema = z.object({
+  title: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(500).optional(),
+  visibility: z.enum(['PRIVATE', 'SHARED', 'PUBLIC']).optional(),
+}).strict()
+
+export const listUpdateSchema = z.object({
+  title: z.string().trim().min(2).max(120).optional(),
+  description: z.string().trim().max(500).nullable().optional(),
+  visibility: z.enum(['PRIVATE', 'SHARED', 'PUBLIC']).optional(),
+}).strict().refine((value) => Object.keys(value).length > 0, { message: 'No list update was provided.' })
+
+export const listItemSchema = z.object({
+  targetType: z.enum(['BOOK', 'PRODUCT']).default('BOOK'),
+  targetId: socialTargetId,
+  note: z.string().trim().max(300).optional(),
+}).strict()
+
+export const listMemberSchema = z.object({
+  email: socialEmail,
+  role: z.enum(['EDITOR', 'VIEWER']).default('VIEWER'),
+}).strict()
+
+export const preferredItemSchema = z.object({ preferred: z.boolean() }).strict()
+
+export const aiChatSchema = z.object({
+  message: z.string().trim().min(2).max(1000),
 }).strict()
 
 const addressFields = {
