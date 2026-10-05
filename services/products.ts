@@ -31,13 +31,18 @@ function toDatabase(book: Book) {
 
 export async function listProducts() {
   if (!isDatabaseConfigured) return [...mockStore.books.values()]
-  const results = await prisma.book.findMany({ where: { active: true }, orderBy: { title: 'asc' } })
+  const results = await prisma.book.findMany({
+    where: { active: true, OR: [{ vendorId: null }, { vendor: { is: { status: 'APPROVED' } } }] },
+    orderBy: { title: 'asc' },
+  })
   return results.map(fromDatabase)
 }
 
 export async function getProduct(id: string) {
   if (!isDatabaseConfigured) return mockStore.books.get(id) ?? null
-  const result = await prisma.book.findFirst({ where: { id, active: true } })
+  const result = await prisma.book.findFirst({
+    where: { id, active: true, OR: [{ vendorId: null }, { vendor: { is: { status: 'APPROVED' } } }] },
+  })
   return result ? fromDatabase(result) : null
 }
 

@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server'
-import { apiError, badRequest, readJsonObject, unauthorized } from '@/lib/api'
+import { apiError, badRequest, readJsonObject } from '@/lib/api'
 import { DomainError } from '@/lib/domain-error'
-import { readSession } from '@/services/auth'
+import { requireAuth, requireCustomer } from '@/lib/authorization'
+import { rateLimit } from '@/lib/rate-limit'
+import { sameOriginOnly } from '@/lib/request-security'
 import { removeCartItem, setCartQuantity } from '@/services/cart'
 
 export const dynamic = 'force-dynamic'
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ bookId: string }> }) {
   try {
-    const user = await readSession()
-    if (!user) return unauthorized()
+    const originError = sameOriginOnly(request)
+    if (originError) return originError
+    const rateLimitError = rateLimit(request, { namespace: 'cart-write', limit: 60, windowMs: 60 * 1000 })
+    if (rateLimitError) return rateLimitError
+    const user = requireCustomer(await requireAuth())
     const body = await readJsonObject(request) as { quantity?: unknown }
-    if (typeof body.quantity !== 'number' || !Number.isInteger(body.quantity) || body.quantity < 0) {
-      return badRequest('Quantity must be a non-negative whole number.')
+    if (typeof body.quantity !== 'number' || !Number.isInteger(body.quantity) || body.quantity < 0 || body.quantity > 100) {
+      return badRequest('Quantity must be a whole number between 0 and 100.')
     }
     const { bookId } = await params
     return NextResponse.json(await setCartQuantity(user.id, bookId, body.quantity))
@@ -22,10 +27,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ bookId: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ bookId: string }> }) {
   try {
-    const user = await readSession()
-    if (!user) return unauthorized()
+    const originError = sameOriginOnly(request)
+    if (originError) return originError
+    const rateLimitError = rateLimit(request, { namespace: 'cart-write', limit: 60, windowMs: 60 * 1000 })
+    if (rateLimitError) return rateLimitError
+    const user = requireCustomer(await requireAuth())
     const { bookId } = await params
     return NextResponse.json(await removeCartItem(user.id, bookId))
   } catch (error) {

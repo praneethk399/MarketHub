@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { apiError, forbidden, notFound, unauthorized } from '@/lib/api'
-import { readSession } from '@/services/auth'
+import { apiError, notFound } from '@/lib/api'
+import { requireAdmin, requireAuth } from '@/lib/authorization'
+import { sameOriginOnly } from '@/lib/request-security'
 import { getProduct, removeProduct } from '@/services/products'
 
 export const dynamic = 'force-dynamic'
@@ -15,11 +16,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await readSession()
-    if (!user) return unauthorized()
-    if (user.role !== 'ADMIN') return forbidden()
+    const originError = sameOriginOnly(request)
+    if (originError) return originError
+    requireAdmin(await requireAuth())
     const { id } = await params
     const removed = await removeProduct(id)
     return removed ? NextResponse.json({ deleted: true }) : notFound('Book')

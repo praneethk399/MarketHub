@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { apiError, badRequest, forbidden, readJsonObject, unauthorized } from '@/lib/api'
+import { apiError, badRequest, readJsonObject } from '@/lib/api'
 import { isDatabaseConfigured } from '@/lib/prisma'
 import { DomainError } from '@/lib/domain-error'
-import { readSession } from '@/services/auth'
+import { sameOriginOnly } from '@/lib/request-security'
+import { requireAdmin, requireAuth } from '@/lib/authorization'
 import { listProducts, saveProduct } from '@/services/products'
 import type { Book } from '@/data/books'
 
@@ -18,9 +19,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await readSession()
-    if (!user) return unauthorized()
-    if (user.role !== 'ADMIN') return forbidden()
+    const originError = sameOriginOnly(request)
+    if (originError) return originError
+    requireAdmin(await requireAuth())
     const body = await readJsonObject(request) as Partial<Book>
     if (typeof body.id !== 'string' || !body.id.trim()
       || typeof body.title !== 'string' || !body.title.trim()

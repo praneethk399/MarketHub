@@ -20,8 +20,12 @@ export type MockOrder = {
 
 export type MockVendor = {
   id: string
+  userId?: string
   name: string
+  storeName?: string
+  slug?: string
   city: string
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED'
   verified: boolean
   booksSold: number
   authenticity: number
@@ -31,12 +35,60 @@ export type MockVendor = {
   activeSince: string
 }
 
+export type MockVendorApplication = {
+  id: string
+  userId: string
+  storeName: string
+  description: string
+  businessEmail: string
+  phone: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED'
+  adminNotes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type MockReview = {
+  id: string
+  productId: string
+  userId: string
+  rating: number
+  title: string | null
+  content: string
+  verified: true
+  createdAt: string
+  userName: string
+}
+
+export type MockAddress = {
+  id: string
+  userId: string
+  label: string | null
+  recipient: string
+  line1: string
+  line2: string | null
+  city: string
+  region: string
+  postalCode: string
+  country: string
+  phone: string | null
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 type MockStore = {
   books: Map<string, Book>
   users: Map<string, MockUser>
   carts: Map<string, Map<string, number>>
   orders: MockOrder[]
   vendors: MockVendor[]
+  sessions: Map<string, { userId: string; expiresAt: number }>
+  auditLogs: { userId: string | null; action: string; entity: string; entityId: string | null; createdAt: string }[]
+  wishlists: Map<string, Set<string>>
+  vendorApplications: Map<string, MockVendorApplication>
+  reviews: MockReview[]
+  addresses: Map<string, MockAddress>
 }
 
 export const initialVendors: MockVendor[] = [
@@ -51,6 +103,12 @@ const seedStore = (): MockStore => ({
   carts: new Map(),
   orders: [],
   vendors: initialVendors,
+  sessions: new Map(),
+  auditLogs: [],
+  wishlists: new Map(),
+  vendorApplications: new Map(),
+  reviews: [],
+  addresses: new Map(),
 })
 
 const globalForStore = globalThis as typeof globalThis & { marketHubMockStore?: MockStore }
