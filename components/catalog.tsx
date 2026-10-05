@@ -114,7 +114,7 @@ export function Catalog() {
       <div className="desktop-filters"><FilterSidebar filters={filters} onChange={setFilter} /></div>
       <div className="catalog-main">
         <div className="catalog-heading-row">
-          <div><h2>All books<span className="heading-period">.</span></h2><p className="catalog-count">12,346 titles <span>·</span> A considered collection of fiction, classics, literature and new voices.</p></div>
+          <div><h2>All books<span className="heading-period">.</span></h2><p className="catalog-count">{catalogBooks.length.toLocaleString('en-IN')} titles <span>·</span> A considered collection of fiction, classics, literature and new voices.</p></div>
           <SortSelect label="Sort books" value={sort} onChange={setSort} options={['Bestseller', 'Newest arrivals', 'Top rated', 'Price: low to high']} />
         </div>
         <div className="catalog-controls">

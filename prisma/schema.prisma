@@ -102,6 +102,7 @@ model User {
   vendorApplications  VendorApplication[]
   addresses           Address[]
   wishlist            Wishlist?
+  legacyBookWishlistItems LegacyBookWishlistItem[]
   reviews             Review[]
   sessions            Session[]
   auditLogs           AuditLog[]
@@ -163,6 +164,7 @@ model Book {
   vendorId      String?
   vendor        Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
   cartItems     CartItem[]
+  legacyWishlistItems LegacyBookWishlistItem[]
   orderItems    OrderItem[]
   reviewEntries Review[]
   createdAt     DateTime    @default(now())
@@ -301,6 +303,18 @@ model WishlistItem {
 
   @@unique([wishlistId, productId])
   @@index([productId])
+}
+
+model LegacyBookWishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@index([bookId])
 }
 
 model Address {

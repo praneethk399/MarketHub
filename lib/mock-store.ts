@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { hashSync } from 'bcryptjs'
 import { books as catalogue, type Book } from '@/data/books'
+import { buildComparisonOffers } from '@/data/seller-offers'
 
 export type MockUser = {
   id: string
@@ -375,21 +376,34 @@ function seedDemoSocial(store: MockStore) {
   shelf('jane-eyre', 'FINISHED', 100, 21)
   shelf('ikigai', 'FINISHED', 100, 24)
 
-  // Demo marketplace offers from other vendors for the same ISBN, so seller
-  // comparison has real rows to group (grouping key = ISBN only).
-  const offers: { isbn: string; title: string; vendorIndex: number; price: number; id: string }[] = [
-    { id: 'offer-secret-garden-old-town', isbn: '9780141182186', title: 'The Secret Garden', vendorIndex: 1, price: 285 },
-    { id: 'offer-secret-garden-chapter-house', isbn: '9780141182186', title: 'The Secret Garden', vendorIndex: 2, price: 315 },
-    { id: 'offer-hobbit-old-town', isbn: '9780261103283', title: 'The Hobbit', vendorIndex: 1, price: 385 },
-    { id: 'offer-atomic-habits-paper-ink', isbn: '9780735211292', title: 'Atomic Habits', vendorIndex: 0, price: 529 },
-    { id: 'offer-atomic-habits-chapter-house', isbn: '9780735211292', title: 'Atomic Habits', vendorIndex: 2, price: 559 },
-  ]
+  // Fuller shelves drawn from the catalogue obtained by
+  // `scripts/fetch-books.mjs`, so the reading room shows a real library rather
+  // than a handful of placeholder rows. Ids that stop existing are ignored by
+  // getLibraryShelves instead of breaking the shelf.
+  shelf('the-nightingale-hannah', 'CURRENTLY_READING', 41, 2)
+  shelf('number-the-stars-lowry', 'CURRENTLY_READING', 8, 4)
+  shelf('the-hitchhiker-s-guide-to-the-galaxy-adams', 'NOT_STARTED', 0, 5)
+  shelf('the-lightning-thief-riordan', 'NOT_STARTED', 0, 7)
+  shelf('watchmen-moore', 'NOT_STARTED', 0, 8)
+  shelf('anne-of-green-gables-montgomery', 'NOT_STARTED', 0, 9)
+  shelf('dubliners-joyce', 'NOT_STARTED', 0, 10)
+  shelf('the-gene-mukherjee', 'NOT_STARTED', 0, 13)
+  shelf('moneyball-lewis', 'NOT_STARTED', 0, 15)
+  shelf('the-millionaire-next-door-stanley', 'NOT_STARTED', 0, 17)
+  shelf('the-lion-the-witch-and-the-wardrobe-lewis', 'NOT_STARTED', 0, 19)
+  shelf('born-a-crime-noah', 'FINISHED', 100, 20)
+  shelf('through-the-looking-glass-carroll', 'FINISHED', 100, 22)
+  shelf('a-suitable-boy-seth', 'FINISHED', 100, 25)
+  shelf('the-two-towers-tolkien', 'FINISHED', 100, 27)
+  shelf('the-sword-of-summer-riordan', 'FINISHED', 100, 29)
+
+  // Marketplace offers from other vendors for the same ISBN, so seller
+  // comparison has real rows to group (grouping key = ISBN only). Derived from
+  // each book's advertised sellerCount, so every multi-seller title is backed
+  // by actual listings instead of the shelf claiming sellers that have no rows.
+  const offers = buildComparisonOffers([...store.books.values()], initialVendors.map((vendor) => vendor.id))
   for (const offer of offers) {
-    store.offers.push({
-      id: offer.id, isbn: offer.isbn, title: offer.title,
-      vendorId: initialVendors[offer.vendorIndex].id, price: offer.price,
-      format: 'paperback', status: 'ACTIVE', isDemo: true,
-    })
+    store.offers.push({ ...offer, status: 'ACTIVE', isDemo: true })
   }
 }
 

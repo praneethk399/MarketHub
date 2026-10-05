@@ -1,4 +1,5 @@
-import { ProductStatus, VendorStatus } from '@prisma/client'
+import { randomUUID } from 'node:crypto'
+import { Prisma, ProductStatus, VendorStatus } from '@prisma/client'
 import { z } from 'zod'
 import { books } from '@/data/books'
 import { isDatabaseConfigured, prisma } from '@/lib/prisma'
@@ -197,7 +198,7 @@ export async function getWishlist(userId: string) {
     const ids = mockStore.wishlists.get(userId) ?? new Set<string>()
     return [...ids].map((id) => mockStore.books.get(id)).filter((book) => book !== undefined).map(toBookProduct)
   }
-  const wishlist = await prisma.wishlist.findUnique({
+  const [wishlist, legacyItems] = await Promise.all([prisma.wishlist.findUnique({
     where: { userId },
     include: {
       items: {
@@ -214,8 +215,21 @@ export async function getWishlist(userId: string) {
         },
       },
     },
-  })
-  return wishlist?.items.map(({ product }) => ({
+  }), prisma.$queryRaw<Array<{
+    id: string; title: string; author: string; coverUrl: string; isbn: string | null
+    price: number | null; originalPrice: number | null; rating: number | null
+    reviews: number | null; stock: number | null; status: string; category: string; format: string
+  }>>(Prisma.sql`
+    SELECT b."id", b."title", b."author", b."coverUrl", b."isbn", b."price",
+      b."originalPrice", b."rating", b."reviews", b."stock", b."status", b."category", b."format"
+    FROM "LegacyBookWishlistItem" AS w
+    INNER JOIN "Book" AS b ON b."id" = w."bookId"
+    LEFT JOIN "Vendor" AS v ON v."id" = b."vendorId"
+    WHERE w."userId" = ${userId} AND b."active" = TRUE
+      AND (b."vendorId" IS NULL OR v."status" = 'APPROVED')
+    ORDER BY w."createdAt" DESC
+  `)])
+  const products = wishlist?.items.map(({ product }) => ({
     id: product.id,
     slug: product.slug,
     title: product.title,
@@ -236,6 +250,28 @@ export async function getWishlist(userId: string) {
     category: product.category ? { name: product.category.name, slug: product.category.slug } : null,
     vendor: product.vendor,
   })) ?? []
+  const books = legacyItems.map((book) => ({
+    id: book.id,
+    slug: book.id,
+    title: book.title,
+    description: '',
+    author: book.author,
+    isbn: book.isbn,
+    publisher: null,
+    publicationYear: null,
+    language: 'en',
+    format: book.format,
+    price: book.price,
+    compareAtPrice: book.originalPrice,
+    status: book.status === 'in-stock' ? 'ACTIVE' : 'OUT_OF_STOCK',
+    rating: book.rating ?? 0,
+    reviewCount: book.reviews ?? 0,
+    availableInventory: book.stock,
+    images: [{ url: book.coverUrl, alt: `Cover of ${book.title}`, position: 0 }],
+    category: { name: book.category, slug: slugify(book.category) },
+    vendor: null,
+  }))
+  return [...books, ...products]
 }
 
 export async function addWishlistProduct(userId: string, productId: string) {
@@ -247,6 +283,18 @@ export async function addWishlistProduct(userId: string, productId: string) {
     return true
   }
 
+  const book = await prisma.book.findFirst({
+    where: { id: productId, active: true, OR: [{ vendorId: null }, { vendor: { status: 'APPROVED' } }] },
+    select: { id: true },
+  })
+  if (book) {
+    await prisma.$executeRaw(Prisma.sql`
+      INSERT INTO "LegacyBookWishlistItem" ("id", "userId", "bookId")
+      VALUES (${randomUUID()}, ${userId}, ${book.id})
+      ON CONFLICT ("userId", "bookId") DO NOTHING
+    `)
+    return true
+  }
   const product = await prisma.product.findFirst({
     where: { id: productId, status: ProductStatus.ACTIVE, vendor: { is: { status: VendorStatus.APPROVED } } },
     select: { id: true },
@@ -270,6 +318,10 @@ export async function removeWishlistProduct(userId: string, productId: string) {
   if (!isDatabaseConfigured) {
     return mockStore.wishlists.get(userId)?.delete(productId) ?? false
   }
+  const removedBook = await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM "LegacyBookWishlistItem" WHERE "userId" = ${userId} AND "bookId" = ${productId}
+  `)
+  if (removedBook > 0) return true
   const wishlist = await prisma.wishlist.findUnique({ where: { userId }, select: { id: true } })
   if (!wishlist) return false
   const deleted = await prisma.wishlistItem.deleteMany({ where: { wishlistId: wishlist.id, productId } })

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { hashSync } from 'bcryptjs'
 import { books } from '../data/books'
+import { buildComparisonOffers } from '../data/seller-offers'
 import { initialVendors } from '../lib/mock-store'
 
 const prisma = new PrismaClient()
@@ -13,6 +14,19 @@ const demoUsers = [
 ] as const
 
 const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000)
+
+/**
+ * Run an async task over many items in bounded parallel batches.
+ *
+ * The catalogue holds hundreds of books and competing listings, so awaiting
+ * them one at a time made seeding needlessly slow. Batching keeps the promise
+ * count near the Prisma connection pool while removing the serial round-trips.
+ */
+async function inBatches<T>(items: T[], size: number, run: (item: T, index: number) => Promise<unknown>) {
+  for (let start = 0; start < items.length; start += size) {
+    await Promise.all(items.slice(start, start + size).map((item, offset) => run(item, start + offset)))
+  }
+}
 
 async function seedDemoSocial() {
   const existing = await prisma.user.findUnique({ where: { email: demoUsers[0].email }, select: { id: true } })
@@ -174,6 +188,23 @@ async function seedDemoSocial() {
       { userId: ava, targetType: 'BOOK', targetId: 'jane-eyre', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
       { userId: ava, targetType: 'BOOK', targetId: 'ikigai', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
       { userId: rahul, targetType: 'BOOK', targetId: 'hobbit', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      // Fuller shelves from the catalogue obtained by `scripts/fetch-books.mjs`.
+      { userId: ava, targetType: 'BOOK', targetId: 'the-nightingale-hannah', status: 'CURRENTLY_READING', progressPercentage: 41, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'number-the-stars-lowry', status: 'CURRENTLY_READING', progressPercentage: 8, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-hitchhiker-s-guide-to-the-galaxy-adams', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-lightning-thief-riordan', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'watchmen-moore', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'anne-of-green-gables-montgomery', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'dubliners-joyce', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-gene-mukherjee', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'moneyball-lewis', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-millionaire-next-door-stanley', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-lion-the-witch-and-the-wardrobe-lewis', status: 'NOT_STARTED', progressPercentage: 0, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'born-a-crime-noah', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'through-the-looking-glass-carroll', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'a-suitable-boy-seth', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-two-towers-tolkien', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
+      { userId: ava, targetType: 'BOOK', targetId: 'the-sword-of-summer-riordan', status: 'FINISHED', progressPercentage: 100, visibility: 'PRIVATE' },
     ],
   })
 
@@ -181,32 +212,33 @@ async function seedDemoSocial() {
 }
 
 async function seedSellerComparisonOffers() {
-  // Products from other vendors sharing ISBNs of curated books so seller
-  // comparison has real rows to group (grouping key = ISBN only).
-  const offers = [
-    { isbn: '9780141182186', title: 'The Secret Garden', vendorIndex: 1, price: 285, slug: 'the-secret-garden-old-town' },
-    { isbn: '9780141182186', title: 'The Secret Garden', vendorIndex: 2, price: 315, slug: 'the-secret-garden-chapter-house' },
-    { isbn: '9780261103283', title: 'The Hobbit', vendorIndex: 1, price: 385, slug: 'the-hobbit-old-town' },
-    { isbn: '9780735211292', title: 'Atomic Habits', vendorIndex: 0, price: 529, slug: 'atomic-habits-paper-ink' },
-    { isbn: '9780735211292', title: 'Atomic Habits', vendorIndex: 2, price: 559, slug: 'atomic-habits-chapter-house' },
-  ]
-  for (const offer of offers) {
-    const vendor = initialVendors[offer.vendorIndex]
+  // Competing listings from other vendors sharing an ISBN, so seller
+  // comparison has real rows to group (grouping key = ISBN only). The offers
+  // are derived from each book's advertised sellerCount, so the shelf's
+  // "3 sellers" claim is always backed by actual database rows.
+  const sourceBooks = books.map((book, index) => ({
+    ...book,
+    vendorId: initialVendors[index % initialVendors.length].id,
+  }))
+  const offers = buildComparisonOffers(sourceBooks, initialVendors.map((vendor) => vendor.id))
+
+  await inBatches(offers, 8, async (offer) => {
+    const productId = `demo-offer-${offer.id}`
     const created = await prisma.product.upsert({
-      where: { id: `demo-offer-${offer.slug}` },
+      where: { id: productId },
       create: {
-        id: `demo-offer-${offer.slug}`,
-        vendorId: vendor.id,
+        id: productId,
+        vendorId: offer.vendorId,
         title: offer.title,
-        slug: offer.slug,
+        slug: offer.id,
         description: 'Demo marketplace listing used for seller comparison (seed data).',
         author: 'See catalogue entry',
         isbn: offer.isbn,
-        format: 'paperback',
+        format: offer.format,
         price: offer.price,
         status: 'ACTIVE',
       },
-      update: { price: offer.price, status: 'ACTIVE' },
+      update: { price: offer.price, format: offer.format, status: 'ACTIVE' },
     })
     // Price history for the product passport (>=2 points).
     const existingPoints = await prisma.priceHistory.count({ where: { productId: created.id } })
@@ -218,7 +250,7 @@ async function seedSellerComparisonOffers() {
         ],
       })
     }
-  }
+  })
   console.log(`Seeded ${offers.length} comparison offers with price history.`)
 }
 
@@ -252,7 +284,7 @@ async function main() {
     })
   }
 
-  for (const [index, book] of books.entries()) {
+  await inBatches(books, 8, async (book, index) => {
     const data = {
       title: book.title,
       author: book.author,
@@ -274,7 +306,7 @@ async function main() {
       vendorId: initialVendors[index % initialVendors.length].id,
     }
     await prisma.book.upsert({ where: { id: book.id }, create: { id: book.id, ...data }, update: data })
-  }
+  })
 
   if (process.env.NODE_ENV === 'production') {
     console.log('Skipped demo social accounts and comparison offers in production.')
