@@ -5,7 +5,7 @@
 **Repository:** https://github.com/praneethk399/MarketHub
 
 **Branch and assessed commit:** `main`, `b42956c`
-**Assessment scope:** Committed repository plus the working-tree files present during review. Twelve service files were untracked and reviewed. Five late-appearing service modules (`sellerPassport.service.ts`, `productPassport.service.ts`, `sellerComparison.service.ts`, `ai.service.ts`, and `social.service.ts`) received separate follow-up reviews. The later changes to `lib/validation.ts` and `services/reviews.ts` were also reviewed. These application files are not included in this report's commits.
+**Assessment scope:** Committed repository plus the working-tree files present during review. Twelve service files were untracked and reviewed. Five late-appearing service modules (`sellerPassport.service.ts`, `productPassport.service.ts`, `sellerComparison.service.ts`, `ai.service.ts`, and `social.service.ts`) received separate follow-up reviews. The later changes to `lib/validation.ts` and `services/reviews.ts` were also reviewed. Fifteen untracked API route files that appeared after the remediation commit were separately reviewed. These application files are not included in this report's commits.
 
 > This record follows the sections in the supplied Build Secure Technical Project & Security Documentation template. Unknown project/team/deployment details are marked as not provided rather than inferred.
 
@@ -118,7 +118,7 @@ flowchart LR
 
 ### Security validation and findings
 
-The static source review covered authentication, authorization, input validation, Prisma access, request-origin checks, rate limiting, configuration/secrets, security headers, API routes, and the working-tree service files. It found **no actionable source-code vulnerabilities** in the reviewed scope. Follow-up reviews also found no exploitable issues in the late-appearing service modules or the later validation/review changes. No callers or API routes exposing the `ai.service.ts`, `productPassport.service.ts`, or `sellerComparison.service.ts` entry points were found at review time. Static review is not proof that the application is free of vulnerabilities.
+The static source review covered authentication, authorization, input validation, Prisma access, request-origin checks, rate limiting, configuration/secrets, security headers, API routes, and the working-tree service files. It found **no actionable source-code vulnerabilities** in the reviewed scope. Follow-up reviews also found no exploitable issues in the late-appearing service modules, validation/review changes, or fifteen API routes that appeared later. Mutating routes in that later batch require a customer session, check request origin, and validate bodies where applicable; list and friendship permissions are delegated to scoped services. No callers or API routes exposing the `ai.service.ts`, `productPassport.service.ts`, or `sellerComparison.service.ts` entry points were found at review time. Static review is not proof that the application is free of vulnerabilities.
 
 The initial full dependency audit identified two HIGH-severity dependency advisories. Both were remediated by updating Prisma and constraining the vulnerable transitive package to a patched release:
 
@@ -145,11 +145,11 @@ Validation used the repository's existing package manager and schema tooling, a 
 | `corepack pnpm audit --prod` | No known production dependency advisories | No known vulnerabilities found before or after remediation | Pass |
 | `corepack pnpm audit` | No known advisories across dependency groups | Initial audit found two HIGH advisories; after remediation, no known vulnerabilities found | Pass after remediation |
 | `npm audit --omit=dev --no-fund --no-progress` | Audit using an npm lockfile | Could not run: this project has `pnpm-lock.yaml`, not `package-lock.json` | Not applicable; pnpm audit was used |
-| `npm run build` | Production build and TypeScript validation succeed | Initial attempt found parse errors in then-current working-tree services; subsequent build completed successfully, including TypeScript and static page generation | Pass on final run |
+| `npm run build` | Production build and TypeScript validation succeed | A build passed after dependency remediation. After additional untracked API routes appeared, the latest build compiled but type-checking failed at `app/api/lists/[id]/route.ts:32:83`: nullable `description` is incompatible with the service input type. | Fail on latest workspace |
 | Prisma schema validation with a placeholder `DATABASE_URL` | Schema validates without contacting a database | Prisma 6.19.3 reported the schema is valid | Pass |
 | Dynamic penetration scan | Runtime scan completes against an authorized target | Not run: Docker/Strix prerequisites and a deployed target were unavailable | Not run |
 
-The successful Prisma schema check used a placeholder URL and did not connect to a database. No automated test suite was available in the inspected repository.
+The successful Prisma schema check used a placeholder URL and did not connect to a database. No automated test suite was available in the inspected repository. The latest build failure is in an untracked API route and was not included in the remediation commit.
 
 ## 8. Deployment & Final Validation
 
@@ -158,10 +158,10 @@ The successful Prisma schema check used a placeholder URL and did not connect to
 | Repository URL | https://github.com/praneethk399/MarketHub |
 | Deployment URL | Not provided |
 | Deployment process | Not verified; see the project README for local setup and optional PostgreSQL instructions |
-| Final application state | Marketplace APIs/services are present in the assessed workspace; the final production build and Prisma schema validation succeeded |
+| Final application state | Prisma schema validation succeeded; the latest production build is blocked by the TypeScript error in the untracked list API route described above |
 | Security status | Static source review found no actionable code-level vulnerability; both initially reported HIGH dependency advisories are remediated and both final pnpm audits are clean |
-| Known unresolved issues | No dynamic penetration scan or deployment validation was performed; team and deployment details were not supplied; untracked application service files remain outside the report/remediation commits |
+| Known unresolved issues | Fix the TypeScript mismatch in `app/api/lists/[id]/route.ts`; no dynamic penetration scan or deployment validation was performed; team and deployment details were not supplied; untracked application files remain outside the report/remediation commits |
 
 ### Final validation
 
-The full and production-only dependency audits, Prisma schema validation, final production build, and static source review were completed and recorded above. The application was not deployed or runtime penetration-tested. Team and deployment details should be completed before presenting this as final project-submission documentation.
+The full and production-only dependency audits, Prisma schema validation, production build attempts, and static source reviews were completed and recorded above. The latest workspace build did not pass; the application was not deployed or runtime penetration-tested. Team and deployment details should be completed before presenting this as final project-submission documentation.
