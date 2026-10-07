@@ -109,7 +109,8 @@ export function Catalog() {
     if (drawerOpen) setDrawerOpen(false)
   }
 
-  return <section className="catalog-section" id="books" ref={sectionRef}>
+  return <section className="catalog-section" id="catalog" ref={sectionRef}>
+    <span className="catalog-anchor" id="books" aria-hidden="true" />
     <div className="catalog-layout">
       <div className="desktop-filters"><FilterSidebar filters={filters} onChange={setFilter} /></div>
       <div className="catalog-main">

@@ -1,0 +1,11 @@
+# The ThreeUI artifacts under components/landing-pages and public/ are copied
+# byte-for-byte from their published source bundles and are verified by SHA-256.
+# They ship with the publisher's own CRLF line endings, so git must not rewrite
+# them on the way in or out — a checkout that normalises them would change the
+# bytes and break the hash check.
+components/landing-pages/LandingPageFrame.tsx -text
+components/landing-pages/pageTypography.ts -text
+components/landing-pages/pageRecipes.ts -text
+components/landing-pages/threeui.css -text
+public/landing-pages/*.html -text
+public/shaders/ashen-press/sources/*.html -text

@@ -13,6 +13,34 @@ import type { NextConfig } from 'next'
  */
 const workerCount = Math.max(1, Math.min(cpus().length - 1, Math.floor(totalmem() / 1024 ** 3 / 4), 6))
 
+/* Served documents that are complete pages of their own — the two ThreeUI
+   landing documents and the Ashen Press shelf. They are framed by our own
+   sections, so they opt out of the app-wide framing denial and declare the
+   origins their authored code actually fetches: Three.js from jsDelivr (r165
+   for the shelf) and unpkg (r181 for the press), Google Fonts, and the media
+   bucket the publisher's own deploy serves the cover videos and embedded
+   plates from. */
+const framedDocumentCsp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https://ublctyddhtbgaersvxxb.supabase.co",
+  "media-src 'self' blob: https://ublctyddhtbgaersvxxb.supabase.co",
+  "connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://ublctyddhtbgaersvxxb.supabase.co",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'self'",
+].join('; ')
+
+const framedDocumentHeaders = [
+  { key: 'Content-Security-Policy', value: framedDocumentCsp },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Referrer-Policy', value: 'no-referrer' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+]
+
 const nextConfig: NextConfig = {
   agentRules: false,
   experimental: { cpus: workerCount },
@@ -41,7 +69,11 @@ const nextConfig: NextConfig = {
     if (process.env.NODE_ENV === 'production') {
       securityHeaders.push({ key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' })
     }
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      { source: '/landing-pages/:path*', headers: framedDocumentHeaders },
+      { source: '/shaders/:path*', headers: framedDocumentHeaders },
+    ]
   },
   images: {
     remotePatterns: [

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { ArrowUpRight, Heart } from 'lucide-react'
 import { useState } from 'react'
 import type { Book } from '@/data/books'
+import { useCoverTilt } from './book-motion'
 import { useStorefront } from './storefront'
 import { Badge, Rating } from './ui'
 
@@ -12,6 +13,7 @@ const pageLayerBooks = new Set(['secret-garden', 'song-achilles', 'great-gatsby'
 
 export function BookCard({ book }: { book: Book }) {
   const { wishlist, toggleWishlist, addToCart } = useStorefront()
+  const tilt = useCoverTilt<HTMLDivElement>()
   const [imageFailed, setImageFailed] = useState(false)
   const [notified, setNotified] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -33,11 +35,13 @@ export function BookCard({ book }: { book: Book }) {
   }
 
   return <article className="book-card">
-    <div className={`book-art ${pageLayerBooks.has(book.id) ? 'book-page-featured' : ''}`}>
+    <div className={`book-art ${pageLayerBooks.has(book.id) ? 'book-page-featured' : ''}`} ref={tilt.ref} onPointerMove={tilt.track} onPointerLeave={tilt.settle}>
       <a className={`book-cover ${imageFailed ? 'cover-failed' : ''}`} href={`/books/${book.id}`} aria-label={`View ${book.title}`}>
         {!imageFailed && <Image src={book.cover} alt={`Cover artwork for ${book.title}`} fill sizes="(max-width: 580px) 46vw, (max-width: 900px) 30vw, (max-width: 1250px) 24vw, 19vw" onError={() => setImageFailed(true)} />}
         {imageFailed && <span className="cover-fallback-art"><small>{book.category}</small><strong>{book.title}</strong></span>}
         <span className="cover-shade" />
+        <span className="cover-sheen" aria-hidden="true" />
+        <span className="cover-spine" aria-hidden="true" />
       </a>
       {book.badge && (/^\d+% OFF$/.test(book.badge) || book.badge === 'NEW EDITION') && <Badge tone={book.badge === 'NEW EDITION' ? 'new' : 'gold'}>{book.badge}</Badge>}
       <button className={`wishlist-button ${saved ? 'is-saved' : ''}`} type="button" aria-label={saved ? `Remove ${book.title} from wishlist` : `Add ${book.title} to wishlist`} aria-pressed={saved} onClick={() => toggleWishlist(book.id, book.title)}><Heart size={17} fill={saved ? 'currentColor' : 'none'} strokeWidth={1.65} /></button>
