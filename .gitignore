@@ -8,3 +8,10 @@ dist
 !.env.example
 *.db
 *.db-journal
+
+# Local preview/tooling scratch
+.freebuff/preview*.log
+.freebuff/preview*.log.err
+.freebuff/preview.pid
+.freebuff/sponsored-runtime/
+.cfreebuff/
