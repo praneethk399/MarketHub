@@ -692,3 +692,5 @@
 .app .toast-stack {position: fixed; right: 24px; bottom: 24px; z-index: 90; display: grid; gap: 10px;}
 .app .toast {display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; background: rgba(21,21,23,.96); color: var(--paper); font-size: 13px; box-shadow: 0 18px 44px rgba(0,0,0,.4);}
 .app .toast button.icon-button {width: 26px; height: 26px;}
+.app .rating-none {color: var(--muted); font-size: 11px;}
+.app .price-unavailable {color: var(--muted); font-size: 12px; font-style: italic;}

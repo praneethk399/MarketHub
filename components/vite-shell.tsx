@@ -56,10 +56,13 @@ export function ViteButton({
 }
 
 export function ViteRating({ book }: { book: Book }) {
+  // Imported records carry no rating and no reviews — say so once, quietly,
+  // rather than printing the raw placeholder in the rating row.
+  if (book.rating === undefined) return <span className="rating rating-none">Not yet rated</span>
   return (
     <span className="rating">
       <Star size={12} fill="currentColor" />
-      {' '}{book.rating === undefined ? 'Information unavailable' : book.rating.toFixed(1)}
+      {' '}{book.rating.toFixed(1)}
       <span> ({(book.reviews ?? 0).toLocaleString('en-IN')})</span>
     </span>
   )
@@ -387,7 +390,6 @@ export function ViteBookCard({ book }: { book: Book }) {
   const discount = book.price && book.originalPrice ? Math.round((1 - book.price / book.originalPrice) * 100) : null
   const purchasable = book.status === 'in-stock' && book.price !== null
   const [imageBroken, setImageBroken] = useState(false)
-
   return (
     <article className="book-card">
       <Link href={`/books/${book.id}`} aria-label={`View ${book.title}`}>
@@ -416,14 +418,21 @@ export function ViteBookCard({ book }: { book: Book }) {
         <span className="book-card-author">{book.author}</span>
         <div className="meta-row">
           <ViteRating book={book} />
-          <span className={`stock ${book.status !== 'in-stock' || book.stock === null ? 'out' : ''}`}>
-            {book.stock === null ? 'Stock unavailable' : book.status !== 'in-stock' ? 'Out of stock' : `${book.stock} in stock`}
-          </span>
+          {/* The whole availability line collapses for metadata-only records:
+              “Stock unavailable” plus “Price unavailable” is repetition with no
+              information in it. The detail page carries the honest wording. */}
+          {book.status !== 'out-of-stock' && book.stock !== null && (
+            <span className="stock"><span />{book.stock} in stock</span>
+          )}
         </div>
         <div className="book-card-price-row">
-          <span className="price">{money(book.price)}</span>
-          {book.originalPrice ? <span className="mrp">{money(book.originalPrice)}</span> : null}
-          {discount ? <span className="discount">{discount}% off</span> : null}
+          {book.price !== null
+            ? <>
+                <span className="price">{money(book.price)}</span>
+                {book.originalPrice ? <span className="mrp">{money(book.originalPrice)}</span> : null}
+                {discount ? <span className="discount">{discount}% off</span> : null}
+              </>
+            : <span className="price-unavailable">Priced by sellers — not yet listed</span>}
         </div>
       </div>
     </article>

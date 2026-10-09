@@ -10,6 +10,7 @@ dist
 *.db-journal
 
 # Local preview/tooling scratch
+.freebuff/run.md
 .freebuff/preview*.log
 .freebuff/preview*.log.err
 .freebuff/preview.pid
