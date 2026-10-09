@@ -34,6 +34,6 @@ export function filterBooks(items: Book[], filters: FilterState) {
   return items.filter((book) =>
     (filters.category === 'All' || book.category === filters.category) &&
     (!filters.inStockOnly || book.status === 'in-stock') &&
-    (!filters.formats.length || filters.formats.includes(book.format))
+    (!filters.formats.length || (book.format !== undefined && filters.formats.includes(book.format)))
   )
 }

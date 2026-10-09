@@ -1,6 +1,8 @@
 import type { Book } from '@/data/books'
 import { isDatabaseConfigured, prisma } from '@/lib/prisma'
 import { mockStore } from '@/lib/mock-store'
+import { importedAsBook, importedById } from './catalogue'
+import { DomainError } from '@/lib/domain-error'
 
 function fromDatabase(book: {
   id: string; title: string; author: string; coverUrl: string; isbn: string | null
@@ -21,6 +23,11 @@ function fromDatabase(book: {
 }
 
 function toDatabase(book: Book) {
+  /* The persistence column is NOT NULL and the admin route already validates
+     `format`, so refusing here rather than defaulting keeps the rule "never invent
+     catalogue data" true even if a future caller forgets. Title, author, cover and
+     category are likewise required by the schema and by that route. */
+  if (!book.format) throw new DomainError('A format is required to publish a book.', 400)
   return {
     id: book.id, title: book.title, author: book.author, coverUrl: book.cover,
     isbn: book.isbn ?? null, price: book.price, originalPrice: book.originalPrice ?? null,
@@ -40,7 +47,14 @@ export async function listProducts() {
 }
 
 export async function getProduct(id: string) {
-  if (!isDatabaseConfigured) return mockStore.books.get(id) ?? null
+  if (!isDatabaseConfigured) {
+    const seeded = mockStore.books.get(id)
+    if (seeded) return seeded
+    // Imported catalogue records are metadata-only (no price, no stock), but their
+    // detail pages must still resolve rather than 404.
+    const imported = importedById(id)
+    return imported ? importedAsBook(imported) : null
+  }
   const result = await prisma.book.findFirst({
     where: { id, active: true, OR: [{ vendorId: null }, { vendor: { is: { status: 'APPROVED' } } }] },
   })

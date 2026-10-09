@@ -1,28 +1,24 @@
-import { Navbar } from '@/components/navbar'
-import { Hero } from '@/components/hero'
-import { FeaturedCollection } from '@/components/featured-collection'
-import { CollectionTrustStrip } from '@/components/collection-trust-strip'
-import { Catalog } from '@/components/catalog'
-import { Footer } from '@/components/footer'
+import { ViteShell } from '@/components/vite-shell'
+import { ViteHome } from '@/components/vite-home'
+import { books, formats } from '@/data/books'
+import { selectFeaturedBooks } from '@/components/featured-selection'
 
 /**
- * The shelf is the way in, the catalogue is the way through it.
- *
- * The featured section owns `#bestsellers` (the anchor the hero and footer have
- * always linked to), sits directly under the hero, and is backed by the same live
- * catalogue the grid below renders — not a decorative frame and not a second
- * dataset. The catalogue keeps search, filters, sorting, stock, wishlist and the
- * full book detail routes.
+ * The storefront arrives through the ported editorial design. The featured
+ * spread is the same deterministic selection the old showcase used (tested in
+ * featured-showcase.test.ts), so the shelf's contract carries over; the hero
+ * stats are real catalogue counts, not the SPA's invented 55+/12/18.
  */
 export default function HomePage() {
-  return <div className="site-shell">
-    <Navbar />
-    <main>
-      <div className="page-container"><Hero /></div>
-      <FeaturedCollection />
-      <CollectionTrustStrip />
-      <Catalog />
-    </main>
-    <Footer />
-  </div>
+  const [featured] = selectFeaturedBooks(books, 1)
+  const stats = {
+    titles: books.length,
+    categories: [...new Set(books.map((book) => book.category))].length,
+    formats: formats.length,
+  }
+  return (
+    <ViteShell>
+      <ViteHome featured={featured} stats={stats} />
+    </ViteShell>
+  )
 }

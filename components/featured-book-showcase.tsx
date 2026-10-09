@@ -198,8 +198,10 @@ export function FeaturedBookShowcase({ books, notice = '' }: { books: Book[]; no
           <div>
             <div className="featured-meta">
               <span>{active.category}</span>
-              <span aria-hidden="true">·</span>
-              <span>{active.format}</span>
+              {active.format && <>
+                <span aria-hidden="true">·</span>
+                <span>{active.format}</span>
+              </>}
               {active.badge && <span className="featured-badge">{active.badge}</span>}
             </div>
             <h3 className="featured-title"><a href={openHref}>{active.title}</a></h3>

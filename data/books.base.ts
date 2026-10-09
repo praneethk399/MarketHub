@@ -26,7 +26,9 @@ export type Book = {
   status: 'in-stock' | 'out-of-stock'
   badge?: string
   category: string
-  format: 'paperback' | 'hardcover'
+  /** Absent when the source does not state one — Open Library records carry no
+      format, and the storefront renders nothing rather than guessing. */
+  format?: 'paperback' | 'hardcover'
   action?: 'notify' | 'details'
 }
 

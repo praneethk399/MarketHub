@@ -28,7 +28,7 @@ export function BookDetail({ book }: { book: Book }) {
         <Image src={book.cover} alt={`Cover of ${book.title}`} width={260} height={380} priority />
       </div>
       <div className="book-detail-meta">
-        <p className="book-detail-category">{book.category} · {book.format}</p>
+        <p className="book-detail-category">{book.category}{book.format ? ` · ${book.format}` : ''}</p>
         <h1>{book.title}<span className="heading-period">.</span></h1>
         <p className="book-detail-author">by {book.author}</p>
         {book.rating !== undefined && <p className="book-detail-rating"><Star size={15} aria-hidden="true" /> {book.rating} / 5 from {book.reviews ?? 0} marketplace ratings</p>}

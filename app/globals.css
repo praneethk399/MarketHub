@@ -993,7 +993,12 @@ img { display: block; max-width: 100%; }
    under the pointer. The tilt comes from `book-motion.ts`; everything the eye
    sees is still painted here. */
 .book-art { --tilt-x: 0deg; --tilt-y: 0deg; --sheen-x: 50%; perspective: 1100px; }
-.book-cover { position: relative; transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); transform-origin: 50% 62%; transition: transform .42s cubic-bezier(.22,1,.36,1), box-shadow .42s ease; }
+/* `.book-cover` must keep the absolute `inset: 0` fill it is given above: the
+   cover image is a `fill` child and the board only gets its height from
+   `.book-art`'s aspect-ratio. Declaring `position: relative` here reset that and
+   collapsed every cover on the site to zero height. Transforms apply just as
+   well to the absolutely positioned anchor, so the tilt is unaffected. */
+.book-cover { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); transform-origin: 50% 62%; transition: transform .42s cubic-bezier(.22,1,.36,1), box-shadow .42s ease; }
 .book-art[data-motion="tilt"] .book-cover { transition-duration: .1s; box-shadow: 0 26px 44px -24px rgba(0,0,0,.75), 0 2px 6px rgba(0,0,0,.42); }
 .book-card:hover .book-cover { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(-3px); }
 .cover-sheen { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: linear-gradient(105deg, transparent 33%, rgba(238,232,220,.14) 46%, rgba(216,198,164,.32) 50%, rgba(238,232,220,.14) 54%, transparent 67%); background-size: 250% 100%; background-position: var(--sheen-x) 0; transition: opacity .3s ease; }
@@ -1114,3 +1119,46 @@ img { display: block; max-width: 100%; }
   .featured-side { transition: none; }
   .featured-step, .featured-progress button::before { transition: none; }
 }
+
+/* ── The full catalogue ────────────────────────────────────────────────────
+   A server-rendered browse of the large catalogue: search, category, sort and
+   page all live in the URL, so paging through thousands of titles needs no client
+   state and the grid is already in the first HTML response. It keeps the same
+   measure and typography as the rest of the storefront. */
+.catalogue-page { width: min(1360px, calc(100% - 80px)); margin: 0 auto; padding: 78px 0 100px; }
+.catalogue-head { padding: 0 0 26px; border-bottom: 1px solid var(--border); }
+.catalogue-head h1 { margin: 16px 0 14px; color: var(--ivory); font-family: var(--serif); font-size: clamp(30px, 3.4vw, 52px); font-weight: 400; letter-spacing: -.035em; line-height: 1.04; }
+.catalogue-lede { max-width: 640px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+.catalogue-search { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.catalogue-search input[type="search"] { flex: 1 1 320px; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 2px; background: var(--surface); color: var(--ivory); font-size: 14px; font-family: inherit; }
+.catalogue-search input[type="search"]:focus { outline: 2px solid var(--gold-bright); outline-offset: 1px; border-color: var(--gold); }
+.catalogue-clear { color: var(--muted); font-size: 13px; }
+.catalogue-clear:hover { color: var(--gold-bright); }
+
+.catalogue-sorts { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 22px; margin-top: 22px; }
+.catalogue-sorts a { color: var(--muted); font-size: 13px; letter-spacing: .02em; }
+.catalogue-sorts a:hover { color: var(--gold-bright); }
+.catalogue-sorts a.is-current { color: var(--ivory); border-bottom: 1px solid var(--gold); padding-bottom: 2px; }
+
+.catalogue-categories { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 20px 0 0; }
+.catalogue-categories a { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 11px; border: 1px solid var(--border); border-radius: 2px; color: var(--muted); font-size: 12px; }
+.catalogue-categories a:hover { color: var(--gold-bright); border-color: var(--gold); }
+.catalogue-categories a.is-current { color: var(--ivory); border-color: var(--gold); background: rgba(216,198,164,.06); }
+.catalogue-categories small { color: var(--subtle); font-size: 10px; }
+
+.catalogue-status { margin: 26px 0 22px; color: var(--muted); font-size: 13px; }
+.catalogue-status strong { color: var(--ivory); font-weight: 500; }
+
+.catalogue-pages { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 46px; padding-top: 26px; border-top: 1px solid var(--border); }
+.catalogue-page-step { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--border-strong); border-radius: 2px; color: var(--ivory); font-size: 13px; }
+.catalogue-page-step:hover { color: var(--gold-bright); border-color: var(--gold); }
+.catalogue-page-step.is-disabled { opacity: .35; }
+.catalogue-page-count { color: var(--muted); font-size: 12px; }
+
+@media (max-width: 760px) {
+  .catalogue-page { width: calc(100% - 36px); padding: 54px 0 80px; }
+  .catalogue-search input[type="search"] { flex: 1 1 100%; }
+  .catalogue-pages { flex-wrap: wrap; gap: 12px; }
+}
+
