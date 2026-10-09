@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
-import { books, type Book } from '@/data/books'
+import type { Book } from '@/data/books'
 import { BookCard } from './book-card'
 import { FilterSidebar, filterBooks, type FilterState } from './filter-sidebar'
+import { useLiveCatalogue } from './use-live-catalogue'
 
 type Priority = '' | 'price' | 'trust' | 'stock' | 'value'
 
@@ -44,27 +45,10 @@ export function Catalog() {
   const [sort, setSort] = useState('Bestseller')
   const [query, setQuery] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [catalogBooks, setCatalogBooks] = useState(books)
-  const [catalogError, setCatalogError] = useState('')
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/books', { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`Book catalogue request failed (${response.status}).`)
-        const payload = await response.json() as { data?: Book[] }
-        if (!Array.isArray(payload.data)) throw new Error('Book catalogue response was not valid.')
-        setCatalogBooks(payload.data)
-        setCatalogError('')
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        console.error('[MarketHub] Unable to refresh the catalogue from the API.', error)
-        setCatalogError('The live catalogue could not be reached. Showing the locally saved shelf.')
-      })
-
-    return () => controller.abort()
-  }, [])
+  /* One shared live catalogue: the featured shelf above reads the same array, and
+     the single `/api/books` request is deduped in the store. The seeded catalogue
+     is the first render on both server and client, so first paint is unchanged. */
+  const { books: catalogBooks, error: catalogError } = useLiveCatalogue()
 
   useEffect(() => {
     const onSearch = (event: Event) => {

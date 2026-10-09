@@ -13,13 +13,13 @@ import type { NextConfig } from 'next'
  */
 const workerCount = Math.max(1, Math.min(cpus().length - 1, Math.floor(totalmem() / 1024 ** 3 / 4), 6))
 
-/* Served documents that are complete pages of their own — the two ThreeUI
-   landing documents and the Ashen Press shelf. They are framed by our own
-   sections, so they opt out of the app-wide framing denial and declare the
-   origins their authored code actually fetches: Three.js from jsDelivr (r165
+/* The Ashen Press shelf is a complete served document of its own. It is framed
+   by our own section, so it opts out of the app-wide framing denial and declares
+   the origins its authored code actually fetches: Three.js from jsDelivr (r165
    for the shelf) and unpkg (r181 for the press), Google Fonts, and the media
-   bucket the publisher's own deploy serves the cover videos and embedded
-   plates from. */
+   bucket the publisher's own deploy serves the cover videos and embedded plates
+   from. Nothing else is served from /shaders, and it stays scoped to that path
+   so the app-wide policy is never relaxed for the rest of the site. */
 const framedDocumentCsp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com",
@@ -71,7 +71,6 @@ const nextConfig: NextConfig = {
     }
     return [
       { source: '/:path*', headers: securityHeaders },
-      { source: '/landing-pages/:path*', headers: framedDocumentHeaders },
       { source: '/shaders/:path*', headers: framedDocumentHeaders },
     ]
   },
