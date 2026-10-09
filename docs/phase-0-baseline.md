@@ -35,8 +35,17 @@ All commands run from the repository root with the frozen lockfile. Raw logs: `.
 | `GET /api/health` | `200` `{"status":"ok","persistence":"mock"}` |
 | `GET /books` | `200` |
 | `GET /landing-pages/complete-shelf-v2.html` | `200` (framed document served from our own origin) |
+| `GET /books/immortals` | `200`; detail page renders real data (₹399, rating, stock, library controls). `Trusted reviews` and `Product Passport` render populated content; `GET /api/books/immortals/social` and `GET /api/books/immortals/passport` both return `200` with valid `{success, data}` payloads |
+| `GET /checkout` | **`404`** — no page route exists (→ MH-18) |
 | Browser console | No errors. Warnings: sandbox-escape warning for the framed document (→ MH-05); two Next `<Image fill>` height warnings on Open Library covers; one preloaded-image-unused warning |
-| Failed network request | one `net::ERR_ABORTED` on initial load |
+| Failed network requests | two `net::ERR_ABORTED` on initial load; one `GET /checkout → 404 (Document)` triggered by the navbar cart CTA (→ MH-18) |
+
+**Dev-tab observation (not a product defect).** In a long-lived preview tab after sustained Turbopack Fast Refresh
+churn (50+ `[HMR] connected`, one `WebSocket … closed before the connection is established`, two aborted
+requests), client hydration stopped attaching to `/books/[id]`: the breadcrumb panels froze on their SSR
+loading text and `Add to cart` produced no request. A single hard reload restored `hydrated: true` and fully
+populated panels, and the click path then worked. Recorded as a dev-experience observation only — it was
+reproduced and then cleared within this session, so it is **not** entered in the issue register.
 
 **Port finding (observed).** `pnpm dev` maps to `next dev --hostname 0.0.0.0` and should bind 3000, but this
 environment exports `PORT=0`, which makes Next bind an OS-assigned random port (observed `64564`, then
@@ -151,8 +160,9 @@ a `503` from `/api/health`.
 - **Vendor:** `/api/vendor/applications` → admin approval → `/api/vendor/products*` (PostgreSQL only).
 - **Admin:** `/api/admin/vendor-applications*`, `/api/admin/vendors/[id]/suspend`, `/api/admin/overview`,
   `/api/admin/security-signals`.
-- **UI gap:** none of the customer/vendor/admin journeys above have a page route in the App Router; only the
-  public storefront, library, social hub, vendor storefront, and atelier are surfaced.
+- **UI gap (→ MH-18):** none of the customer/vendor/admin journeys above have a page route in the App Router;
+only the public storefront, library, social hub, vendor storefront, and atelier are surfaced. The navbar
+nevertheless links to `/checkout` and `/orders`, so those two CTAs 404 (observed).
 
 ### 2.9 Tests and untested critical paths
 
@@ -184,6 +194,7 @@ claimed as findings.
 | MH-01 | P1 | Checkout / money | Mock-mode checkout is neither atomic nor idempotent: it reads the cart, creates the order, then clears the cart and decrements stock as separate steps, and `POST /api/checkout` accepts no idempotency key. Two concurrent requests can both read a non-empty cart and create two orders with double stock decrements. The PostgreSQL path is protected by the transaction plus `stock >= quantity` / `quantity`+`reserved` CAS. | `services/orders.ts` (mock branch of `checkout`), `app/api/checkout/route.ts` | static |
 | MH-02 | P1 | Tests | Automated coverage is 24 assertions in one file, limited to social/privacy invariants. Auth/session, role and ownership boundaries, cart totals, checkout, order transitions, vendor isolation/suspension, admin authz, validation, origin checks and rate limits are untested. | `tests/` (single file); `corepack pnpm test` output | static |
 | MH-03 | P1 | Abuse controls | Rate limiting keys on the client-supplied `x-forwarded-for` / `x-real-ip` header and falls back to the literal `'unknown'` (one shared bucket for all unidentified clients). When the app is reachable without a trusted proxy that overwrites the header, an attacker rotates it to bypass every limit — including the login/register limit. The limiter is also process-local, so it is absent across instances. | `lib/rate-limit.ts:16-18`; applied at `app/api/auth/route.ts:22`, `app/api/checkout/route.ts:12` | static (topology-dependent) |
+| MH-18 | P1 | Broken core journey | The cart's primary CTA and the account menu link to page routes that do not exist. `components/navbar.tsx:128` renders `href="/checkout"` ("Review bag & checkout") and line 93 renders `href="/orders"` ("Order history"); the App Router has no `/checkout` or `/orders` page (no `cart`, `login`, `register`, `wishlist`, `admin`, or vendor page either). The backing APIs (`POST /api/checkout`, `GET /api/orders`) are implemented and validated — the storefront simply cannot reach them, so the purchase journey is unreachable through the UI and the checkout CTA is a dead end. | `components/navbar.tsx:93,128`; `git ls-files 'app/**/page.tsx'`; **observed** `GET /checkout → 404` and a `GET /checkout → 404 (Document)` navigation in the live browser network log | observed |
 | MH-04 | P2 | CSP / XSS | The app-wide CSP uses `script-src 'self' 'unsafe-inline'` with no nonce or hash, so any inline-script injection is executable. This weakens the control the README advertises. Landing documents additionally allow `'unsafe-inline'` inline style/script plus jsDelivr/unpkg as script sources. | `next.config.ts` (`securityHeaders`, `framedDocumentHeaders`) | static |
 | MH-05 | P2 | Frame isolation | The ThreeUI frames are same-origin documents sandboxed with `allow-same-origin allow-scripts` (plus downloads/forms/modals/popups), and the parent writes into `contentDocument` in `onLoad`. The sandbox provides no meaningful isolation for a same-origin document, and the browser warns about it. | `components/landing-pages/threeui-pages.tsx:61,87`; **observed** live console warning | observed |
 | MH-06 | P2 | UX/robustness | No app-level `not-found.tsx`, `error.tsx`, or `loading.tsx`. 404s (from `notFound()` in `/books/[id]` and `/vendors/[id]`), thrown render errors, and route transitions fall back to framework defaults, so the required empty/loading/error polish does not exist. | `git ls-files 'app/**'` — only `page.tsx`, `layout.tsx`, `globals.css` | static |
@@ -228,8 +239,9 @@ own regression tests. No phase proceeds while the previous one has a failing gat
    preload warning.
 
 **Phase 3 — product surface**
-8. Add `not-found.tsx`, `error.tsx`, and `loading.tsx`, then the missing customer journeys
-   (cart → checkout → orders → wishlist → addresses) on top of the existing, already-validated APIs.
+8. Close MH-18 first: ship `/checkout` and `/orders` so the existing navbar CTAs resolve, then add
+   `not-found.tsx`, `error.tsx`, and `loading.tsx`, then the remaining missing customer journeys
+   (cart, login, register, wishlist, addresses) on top of the existing, already-validated APIs.
 9. Vendor and admin dashboards for the existing vendor/admin endpoints, permission-aware navigation,
    confirmation dialogs, safe tables/pagination.
 10. Design-system pass across colours/typography/spacing/radii/shadows/buttons/forms/cards/badges/alerts/
@@ -268,10 +280,11 @@ Stated explicitly so nothing here is mistaken for a passed check:
 4. **No E2E or accessibility tooling.** The brief asks to add the lightest maintainable option if absent;
    none exists today, so the "critical UI flows on mobile and desktop" and "accessibility checks" items are
    not merely failing — they have no harness.
-5. **Manual UI inspection was partial.** Only `/`, `/books`, `/api/health` and the landing documents were
-   exercised live. Search/filter/sort, product detail, cart, checkout, orders, library, social, vendor and
-   admin screens, and every empty/loading/error state were **not** inspected (several have no page route at
-   all — MH-06/clause in §2.8).
+5. **Manual UI inspection was partial.** `/`, `/books`, `/books/[id]`, `/api/health` and the landing documents
+   were exercised live. Search/filter/sort, cart, the checkout and order screens, library, social, vendor and
+   admin screens, and every empty/loading/error state were **not** inspected — and most of them cannot be,
+   because no page route exists (MH-18, MH-06, §2.8). Default framework 404 behaviour was observed at
+   `/checkout`; the styled `not-found`/`error` paths do not exist to test.
 6. **`corepack pnpm audit` scope.** Clean today, but this is a point-in-time advisory database result and
    transitive risk can change without a lockfile change.
 7. **Third-party framed content.** The ThreeUI landing documents and the Ashen Press experience load scripts
